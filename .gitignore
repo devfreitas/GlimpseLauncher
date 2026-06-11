@@ -1,0 +1,14 @@
+/target/
+**/target/**
+Cargo.lock
+**/*.log
+*.rs.bk
+*.swp
+.idea/
+.vscode/
+.DS_Store
+*.tmp
+*.temp
+*.bak
+# Optional IDE files
+*.iml
