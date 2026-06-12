@@ -1,11 +1,14 @@
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
+use winreg::enums::*;
+use winreg::RegKey;
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     /// Hot‑key "Alt+S".
     pub hotkey: Option<String>,
+    pub start_with_windows: Option<bool>,
     pub icon_path: Option<String>,
     pub theme: Option<ThemeConfig>,
 }
@@ -34,6 +37,7 @@ impl Default for Config {
                 background_rgba: Some([20, 20, 22, 200]),
                 blur_radius: None,
             }),
+            start_with_windows: Some(false),
         }
     }
 }
@@ -69,6 +73,15 @@ pub fn load() -> Config {
             &path,
             toml::to_string_pretty(&Config::default()).unwrap_or_default(),
         );
-        Config::default()
+        let cfg = Config::default();
+        if cfg.start_with_windows.unwrap_or(false) {
+            if let Ok(exe_path) = std::env::current_exe() {
+                let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+                if let Ok(run_key) = hkcu.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_WRITE) {
+                    let _ = run_key.set_value("GlimpseLauncher", &exe_path.to_string_lossy().to_string());
+                }
+            }
+        }
+        cfg
     }
 }

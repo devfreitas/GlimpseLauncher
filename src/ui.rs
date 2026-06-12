@@ -6,10 +6,15 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
 };
+
 use windows::core::{w, HSTRING, PCWSTR};
 use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
 use crossbeam_channel::Receiver;
+
+
+
 
 pub struct LauncherApp {
     search_query: String,
@@ -18,6 +23,7 @@ pub struct LauncherApp {
     selected_index: usize,
     is_visible: Arc<AtomicBool>,
     theme: ThemeConfig,
+    launched_paths: std::collections::HashSet<String>,
     was_visible_last_frame: bool,
     current_height: f32,
     index_receiver: Receiver<Vec<AppEntry>>,
@@ -44,6 +50,7 @@ impl LauncherApp {
             current_height: 60.0,
             index_receiver: rx,
             is_indexing: true,
+            launched_paths: std::collections::HashSet::new(),
         }
     }
 
@@ -74,32 +81,35 @@ impl LauncherApp {
         if let Some(app) = self.filtered.get(self.selected_index) {
             let path_str = app.path.to_str().unwrap_or("");
 
-            if path_str.starts_with("UWP:") {
-                let app_id = &path_str[4..];
-                let shell_args = format!("shell:appsFolder\\{}", app_id);
-                let explorer = HSTRING::from("explorer.exe");
-                let args = HSTRING::from(shell_args);
-                unsafe {
-                    ShellExecuteW(
-                        None,
-                        w!("open"),
-                        &explorer,
-                        &args,
-                        PCWSTR::null(),
-                        SW_SHOWNORMAL,
-                    );
-                }
-            } else {
-                let path = HSTRING::from(path_str);
-                unsafe {
-                    ShellExecuteW(
-                        None,
-                        w!("open"),
-                        &path,
-                        PCWSTR::null(),
-                        PCWSTR::null(),
-                        SW_SHOWNORMAL,
-                    );
+            if !self.launched_paths.contains(path_str) {
+                self.launched_paths.insert(path_str.to_string());
+                if path_str.starts_with("UWP:") {
+                    let app_id = &path_str[4..];
+                    let shell_args = format!("shell:appsFolder\\{}", app_id);
+                    let explorer = HSTRING::from("explorer.exe");
+                    let args = HSTRING::from(shell_args);
+                    unsafe {
+                        ShellExecuteW(
+                            None,
+                            w!("open"),
+                            &explorer,
+                            &args,
+                            PCWSTR::null(),
+                            SW_SHOWNORMAL,
+                        );
+                    }
+                } else {
+                    let path = HSTRING::from(path_str);
+                    unsafe {
+                        ShellExecuteW(
+                            None,
+                            w!("open"),
+                            &path,
+                            PCWSTR::null(),
+                            PCWSTR::null(),
+                            SW_SHOWNORMAL,
+                        );
+                    }
                 }
             }
             self.hide(ctx);
@@ -312,7 +322,7 @@ impl eframe::App for LauncherApp {
                                         if app.is_dir {
                                             ui.label(egui::RichText::new("📁").size(18.0));
                                         } else {
-                                            ui.label(egui::RichText::new("🔍").size(18.0));
+                                            ui.label(egui::RichText::new("⚙️").size(18.0)); // executable icon
                                         }
 
                                         ui.add_space(12.0);

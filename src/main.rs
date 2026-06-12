@@ -69,30 +69,6 @@ fn main() -> Result<(), eframe::Error> {
         hotkey::listen_for_hotkey(tx);
     });
 
-    let config = config::load();
-    let icon_data = if let Some(custom_path) = &config.icon_path {
-        image::open(custom_path).ok().and_then(|img| {
-            let image = img.into_rgba8();
-            let (width, height) = image.dimensions();
-            Some(egui::IconData {
-                rgba: image.into_raw(),
-                width,
-                height,
-            })
-        })
-    } else {
-        let icon_bytes = include_bytes!("../public/icon.ico");
-        image::load_from_memory(icon_bytes).ok().and_then(|img| {
-            let image = img.into_rgba8();
-            let (width, height) = image.dimensions();
-            Some(egui::IconData {
-                rgba: image.into_raw(),
-                width,
-                height,
-            })
-        })
-    };
-
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([600.0, 400.0])
@@ -101,8 +77,7 @@ fn main() -> Result<(), eframe::Error> {
             .with_always_on_top()
             .with_transparent(true)
             .with_taskbar(false)
-            .with_visible(true)
-            .with_icon(icon_data.unwrap_or_default()),
+            .with_visible(true),
         ..Default::default()
     };
 
