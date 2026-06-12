@@ -24,6 +24,16 @@ O **Glimpse Launcher** foi desenvolvido para usuários que buscam produtividade 
 - **Integração Web:** Atalhos inteligentes para motores de busca sem precisar abrir o navegador manualmente primeiro.
 - **Interface Minimalista:** Design "Distraction-free" focado no que importa: o resultado da busca.
 
+## Como Usar
+
+O **Glimpse Launcher** funciona com atalhos simples para agilizar sua produtividade:
+
+- **Abrir o Launcher:** Pressione `Alt + S` para exibir a barra de busca a qualquer momento.
+- **Busca Rápida na Web:** Utilize prefixos antes da sua pesquisa para buscar diretamente em sites específicos. Por exemplo:
+  - Digite `g sua pesquisa` para buscar no **Google**.
+  - Digite `y sua pesquisa` para buscar no **YouTube**.
+- **Busca Local:** Digite o nome de um aplicativo ou arquivo local para encontrá-lo instantaneamente.
+
 ## Configuração
 
 O **Glimpse Launcher** é altamente configurável através de arquivos simples, permitindo definir:
