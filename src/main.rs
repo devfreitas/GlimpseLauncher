@@ -23,7 +23,7 @@ use tray_icon::{
 use ui::LauncherApp;
 
 fn create_tray_icon() -> Option<tray_icon::TrayIcon> {
-    let icon_data = include_bytes!("../public/icon.ico");
+    let icon_data = include_bytes!("../public/icon.png");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
         .map(|image| {

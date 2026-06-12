@@ -55,7 +55,7 @@ pub struct AppEntry {
     pub is_dir: bool,
 }
 
-const BLACKLIST: &[&str] = &[
+pub const BLACKLIST: &[&str] = &[
     "unins",
     "uninstall",
     "desinstalar",
@@ -269,19 +269,22 @@ fn base_name(name: &str) -> String {
 }
 
 pub fn build_index() -> Vec<AppEntry> {
-    // Try loading a persisted index first
+    // Try loading persisted index first
     if let Some(saved) = load_index() {
         return saved;
     }
     let mut index = Vec::new();
 
-    // 1. MENU INICIAR (A fonte primária de Apps Reais - Estilo PowerToys)
-    if let Some(mut path) = dirs::data_dir() {
-        path.push("Microsoft\\Windows\\Start Menu\\Programs");
-        scan_directory(&path, &mut index, &["lnk"], 5, false);
+    // 1️⃣ Scan user Start Menu folder
+    if let Some(mut user_path) = dirs::data_dir() {
+        user_path.push("Microsoft\\Windows\\Start Menu\\Programs");
+        scan_directory(&user_path, &mut index, &["lnk"], 5, false);
     }
+    // 2️⃣ Scan "All Users" Start Menu folder
     let sys_start_menu = Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs");
     scan_directory(sys_start_menu, &mut index, &["lnk"], 5, false);
+
+
 
     // 2. APPS MODERNOS (UWP)
     if let Ok(output) = Command::new("powershell")
@@ -352,19 +355,10 @@ pub fn build_index() -> Vec<AppEntry> {
     let mut groups: HashMap<String, AppEntry> = HashMap::with_capacity(index.len());
     for entry in index {
         let key = base_name(&entry.name);
-        if key.is_empty() {
-            continue;
-        }
-
-        // Keep the entry with the *higher* priority. If the existing entry has a lower priority,
-        // replace it; otherwise retain the existing one.
+        if key.is_empty() { continue; }
         match groups.get(&key) {
-            Some(existing) if existing.priority >= entry.priority => {
-                // Existing entry is equal or higher priority – do nothing.
-            }
-            _ => {
-                groups.insert(key, entry);
-            }
+            Some(existing) if existing.priority >= entry.priority => {}
+            _ => { groups.insert(key, entry); }
         }
     }
 

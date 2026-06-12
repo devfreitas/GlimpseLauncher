@@ -1,20 +1,24 @@
-use crate::indexer::AppEntry;
-use fuzzy_matcher::skim::SkimMatcherV2;
+use crate::indexer::{AppEntry, BLACKLIST};
 use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2;
 use rayon::prelude::*;
 
 pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
+    // If the query is empty, show no results initially.
     if query.is_empty() {
-        let mut initial: Vec<AppEntry> = index.iter().take(50).cloned().collect();
-        initial.sort_by(|a, b| b.priority.cmp(&a.priority));
-        return initial.into_iter().take(8).collect();
+        return Vec::new();
     }
 
     let matcher = SkimMatcherV2::default();
     let query_lower = query.to_lowercase();
 
     let mut results: Vec<(i64, AppEntry)> = index
-        .par_iter() // MUDANÇA: Processamento em paralelo!
+        .par_iter()
+        .filter(|app| {
+            let name_lc = app.name.to_lowercase();
+            // Exclude entries whose name contains any black‑list term (case‑insensitive).
+            !BLACKLIST.iter().any(|b| name_lc.contains(&b.to_lowercase()))
+        })
         .filter_map(|app| {
             let name_lower = app.name.to_lowercase();
 
