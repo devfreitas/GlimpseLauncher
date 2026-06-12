@@ -26,7 +26,7 @@ O **Glimpse Launcher** foi desenvolvido para usuários que buscam produtividade 
 
 ## Configuração
 
-O Search Launcher é altamente configurável através de arquivos simples, permitindo definir:
+O **Glimpse Launcher** é altamente configurável através de arquivos simples, permitindo definir:
 
 - Motores de busca web favoritos.
 - Diretórios de indexação para busca local.
@@ -44,16 +44,16 @@ Como o projeto é desenvolvido em Rust, você precisará do `cargo` instalado.
 
 ```bash
 # 1. Clone o repositório
-$ git clone https://github.com/devfreitas/Search-launcher.git
+$ git clone https://github.com/devfreitas/GlimpseLauncher.git
 
 # 2. Acesse o diretório
-$ cd Search-launcher
+$ cd GlimpseLauncher
 
 # 3. Compile para a versão de release (otimizada)
 $ cargo build --release
 
 # 4. Execute o binário gerado
-$ ./target/release/search-launcher
+$ .\target\release\native_launcher.exe
 ```
 - Crie uma branch: git checkout -b feature/nova-melhoria.
 - Commit suas mudanças: git commit -m 'feat: Add nova funcionalidade'.

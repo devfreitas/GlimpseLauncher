@@ -1,11 +1,9 @@
-// Imports
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use winreg::RegKey;
 use winreg::enums::{HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER, KEY_READ};
 
-// Scan "Add/Remove Programs" registry entries (HKLM and HKCU) and add them to the index.
 fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
     let roots = [
         (RegKey::predef(HKEY_LOCAL_MACHINE), "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"),
@@ -15,21 +13,18 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
         if let Ok(key) = root.open_subkey_with_flags(sub_path, KEY_READ) {
             for sub_name in key.enum_keys().filter_map(Result::ok) {
                 if let Ok(app_key) = key.open_subkey(&sub_name) {
-                    // Read display name
                     if let Ok(name) = app_key.get_value::<String, _>("DisplayName") {
                         if name.trim().is_empty() { continue; }
-                        // Prefer DisplayIcon, fallback to UninstallString
                         let path_str: Result<String, _> = app_key.get_value("DisplayIcon")
                             .or_else(|_| app_key.get_value("UninstallString"));
                         let exe_path = path_str.ok().and_then(|s| {
-                            // The value may contain arguments; take the first token and strip quotes
                             let first = s.split_whitespace().next()?;
                             Some(PathBuf::from(first.trim_matches('"')))
                         }).unwrap_or_else(|| PathBuf::new());
                         index.push(AppEntry {
                             name,
                             path: exe_path,
-                            priority: 80, // high priority for installed programs
+                            priority: 80,
                             is_dir: false,
                         });
                     }
@@ -38,10 +33,6 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
         }
     }
 }
-
-
-
-
 
 use walkdir::WalkDir;
 use serde::{Serialize, Deserialize};
@@ -269,24 +260,18 @@ fn base_name(name: &str) -> String {
 }
 
 pub fn build_index() -> Vec<AppEntry> {
-    // Try loading persisted index first
     if let Some(saved) = load_index() {
         return saved;
     }
     let mut index = Vec::new();
 
-    // 1️⃣ Scan user Start Menu folder
     if let Some(mut user_path) = dirs::data_dir() {
         user_path.push("Microsoft\\Windows\\Start Menu\\Programs");
         scan_directory(&user_path, &mut index, &["lnk"], 5, false);
     }
-    // 2️⃣ Scan "All Users" Start Menu folder
     let sys_start_menu = Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs");
     scan_directory(sys_start_menu, &mut index, &["lnk"], 5, false);
 
-
-
-    // 2. APPS MODERNOS (UWP)
     if let Ok(output) = Command::new("powershell")
         .args(&[
             "-NoProfile",
@@ -315,7 +300,6 @@ pub fn build_index() -> Vec<AppEntry> {
         }
     }
 
-    // 3. FERRAMENTAS ESSENCIAIS
     scan_uninstall_registry(&mut index);
 
     let system_tools = [
@@ -338,7 +322,6 @@ pub fn build_index() -> Vec<AppEntry> {
         }
     }
 
-    // 4. PASTAS E ATALHOS DO USUÁRIO (Requisito A)
     if let Some(desktop) = dirs::desktop_dir() {
         scan_directory(&desktop, &mut index, &["lnk", "exe"], 1, true);
     }
@@ -363,13 +346,11 @@ pub fn build_index() -> Vec<AppEntry> {
     }
 
     let mut deduplicated: Vec<AppEntry> = groups.into_values().collect();
-    // Ordenação estável por prioridade e depois nome para consistência
     deduplicated.sort_by(|a, b| {
         b.priority
             .cmp(&a.priority)
             .then_with(|| a.name.cmp(&b.name))
     });
-    // Persist the newly built index for faster subsequent startups
     if let Err(e) = save_index(&deduplicated) {
         eprintln!("Failed to persist index: {e}");
     }
@@ -433,7 +414,6 @@ fn scan_directory(
     }
 }
 
-// Persistence helpers
 fn persisted_index_path() -> PathBuf {
     let mut base = dirs::config_dir().unwrap_or_else(|| Path::new(".").to_path_buf());
     base.push("GlimpseLauncher");
@@ -464,4 +444,3 @@ fn load_index() -> Option<Vec<AppEntry>> {
         Err(_) => None,
     }
 }
-

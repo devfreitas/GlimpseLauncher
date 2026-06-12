@@ -69,10 +69,8 @@ fn main() -> Result<(), eframe::Error> {
         hotkey::listen_for_hotkey(tx);
     });
 
-    // Load launcher icon – uses custom path from config if provided
     let config = config::load();
     let icon_data = if let Some(custom_path) = &config.icon_path {
-        // Attempt to load from user‑specified path
         image::open(custom_path).ok().and_then(|img| {
             let image = img.into_rgba8();
             let (width, height) = image.dimensions();
@@ -83,7 +81,6 @@ fn main() -> Result<(), eframe::Error> {
             })
         })
     } else {
-        // Fallback to bundled icon
         let icon_bytes = include_bytes!("../public/icon.ico");
         image::load_from_memory(icon_bytes).ok().and_then(|img| {
             let image = img.into_rgba8();
@@ -116,7 +113,6 @@ fn main() -> Result<(), eframe::Error> {
         "Native Launcher",
         options,
         Box::new(move |cc| {
-            // Initialise tray icon (optional – ignore if creation fails)
             if let Some(tray) = create_tray_icon() {
                 Box::leak(Box::new(tray));
             }

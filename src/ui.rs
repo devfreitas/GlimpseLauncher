@@ -159,8 +159,7 @@ impl eframe::App for LauncherApp {
             };
 
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(center_pos));
-
-            // When the launcher just opened with an empty query we show no results initially.
+            
             if self.search_query.trim().is_empty() && !self.index.is_empty() {
                 self.filtered.clear();
             }
@@ -187,23 +186,14 @@ impl eframe::App for LauncherApp {
                 self.current_height,
             )));
         }
-
-        // ---- Glassmorphism visual tweaks ----
-        // Adjust global visuals for a translucent, blurred look.
-        // Ensure the native window is created with `transparent: true` in eframe options.
         let mut visuals = ctx.style().visuals.clone();
-        // Semi‑transparent window background (glass effect)
         visuals.window_fill = egui::Color32::from_rgba_unmultiplied(25, 25, 30, 180);
         visuals.window_rounding = egui::Rounding::same(12.0);
-        // Subtle widget backgrounds with translucency
         visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(35, 35, 40, 190);
         visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
         visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(55, 55, 60, 220);
-        // Light inner glow for depth
         visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
         ctx.set_visuals(visuals);
-
-        // Background fill for the result panel (already semi‑transparent)
         let bg = self.theme.background_rgba.unwrap_or([20, 20, 22, 200]);
         let frame_style = egui::Frame {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
@@ -212,19 +202,6 @@ impl eframe::App for LauncherApp {
             inner_margin: egui::Margin::same(0.0),
             ..Default::default()
         };
-        // Optional: Load custom font (Inter) for a modern look.
-        // To enable, place the Inter-Regular.ttf file in the `assets` directory
-        // and uncomment the code below.
-        // let mut fonts = egui::FontDefinitions::default();
-        // fonts.font_data.insert(
-        //     "Inter".to_owned(),
-        //     egui::FontData::from_static(include_bytes!("../assets/Inter-Regular.ttf")),
-        // );
-        // if let Some(family) = fonts.families.get_mut(&egui::FontFamily::Proportional) {
-        //     family.insert(0, "Inter".to_owned());
-        // }
-        // ctx.set_fonts(fonts);
-        // Apply a subtle drop shadow to the result frame for depth
         let mut visuals = ctx.style().visuals.clone();
         visuals.widgets.inactive.bg_stroke = egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
         ctx.set_visuals(visuals);
@@ -332,7 +309,6 @@ impl eframe::App for LauncherApp {
                                 let response = item_frame.show(ui, |ui| {
                                     ui.set_width(ui.available_width());
                                     ui.horizontal(|ui| {
-                                        // Todos os itens agora exibem o ícone de lupa
                                         if app.is_dir {
                                             ui.label(egui::RichText::new("📁").size(18.0));
                                         } else {
