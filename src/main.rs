@@ -63,10 +63,39 @@ fn create_tray_icon() -> Option<tray_icon::TrayIcon> {
 }
 
 fn main() -> Result<(), eframe::Error> {
+    use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
+    use std::io::{prelude::*, BufReader};
+
+    let socket_name = "glimpse_launcher_single_instance.sock".to_ns_name::<GenericNamespaced>().unwrap();
+
+    let listener = match ListenerOptions::new().name(socket_name.clone()).create_sync() {
+        Ok(l) => l,
+        Err(_) => {
+            if let Ok(mut conn) = Stream::connect(socket_name) {
+                let _ = conn.write_all(b"FOCAR_TELA\n");
+            }
+            std::process::exit(0);
+        }
+    };
+
     let (tx, rx) = unbounded();
 
+    let tx_hotkey = tx.clone();
     thread::spawn(move || {
-        hotkey::listen_for_hotkey(tx);
+        hotkey::listen_for_hotkey(tx_hotkey);
+    });
+
+    let tx_ipc = tx.clone();
+    thread::spawn(move || {
+        for conn in listener.incoming() {
+            if let Ok(conn) = conn {
+                let mut conn = BufReader::new(conn);
+                let mut buffer = String::new();
+                if conn.read_line(&mut buffer).is_ok() && buffer.trim() == "FOCAR_TELA" {
+                    let _ = tx_ipc.send(());
+                }
+            }
+        }
     });
 
     let options = eframe::NativeOptions {
