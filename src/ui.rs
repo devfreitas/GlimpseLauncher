@@ -140,6 +140,10 @@ impl LauncherApp {
 }
 
 impl eframe::App for LauncherApp {
+    fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
+        egui::Rgba::TRANSPARENT.to_array()
+    }
+
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         if let Ok(new_index) = self.index_receiver.try_recv() {
             self.index = new_index;
@@ -157,6 +161,11 @@ impl eframe::App for LauncherApp {
             return;
         }
         let just_opened = current_visibility && !self.was_visible_last_frame;
+        if just_opened {
+            if let Some(t) = crate::config::load().theme {
+                self.theme = t;
+            }
+        }
         self.was_visible_last_frame = current_visibility;
 
         if just_opened {
@@ -200,20 +209,42 @@ impl eframe::App for LauncherApp {
                 self.current_height,
             )));
         }
-        let mut visuals = ctx.style().visuals.clone();
-        visuals.window_fill = egui::Color32::from_rgba_unmultiplied(25, 25, 30, 180);
-        visuals.window_rounding = egui::Rounding::same(12.0);
-        visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(35, 35, 40, 190);
-        visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
-        visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(55, 55, 60, 220);
-        visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
-        ctx.set_visuals(visuals);
         let bg = self.theme.background_rgba.unwrap_or([20, 20, 22, 200]);
+        let is_dark = bg[0] < 100;
+
+        let mut visuals = ctx.style().visuals.clone();
+        
+        // Ensure the OS window background is completely transparent so only our rounded frame is visible.
+        visuals.window_fill = egui::Color32::TRANSPARENT;
+        visuals.panel_fill = egui::Color32::TRANSPARENT;
+
+        if is_dark {
+            visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(35, 35, 40, 190);
+            visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
+            visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(55, 55, 60, 220);
+            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
+            visuals.override_text_color = Some(egui::Color32::WHITE);
+        } else {
+            visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(235, 235, 240, 190);
+            visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(220, 220, 225, 210);
+            visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(210, 210, 215, 220);
+            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(200, 200, 210, 120));
+            visuals.override_text_color = Some(egui::Color32::BLACK);
+        }
+        visuals.window_rounding = egui::Rounding::same(12.0);
+        ctx.set_visuals(visuals);
+
+        let frame_stroke = if is_dark {
+            egui::Color32::from_rgba_premultiplied(60, 60, 70, 255)
+        } else {
+            egui::Color32::from_rgba_premultiplied(200, 200, 215, 255)
+        };
+
         let frame_style = egui::Frame {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
-            rounding: egui::Rounding::same(8.0), // smoother corners for glass panels
-            stroke: egui::Stroke::new(1.0, egui::Color32::from_rgba_premultiplied(60, 60, 70, 255)),
-            inner_margin: egui::Margin::same(0.0),
+            rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
+            stroke: egui::Stroke::new(1.0, frame_stroke),
+            inner_margin: egui::Margin::same(8.0), // adds breathing room to the edges
             ..Default::default()
         };
         let mut visuals = ctx.style().visuals.clone();
@@ -226,20 +257,20 @@ impl eframe::App for LauncherApp {
             .show(ctx, |ui| {
                 ui.style_mut().visuals.extreme_bg_color = egui::Color32::TRANSPARENT;
 
+                let input_fill = if is_dark { egui::Color32::from_rgba_premultiplied(35, 35, 40, 255) } else { egui::Color32::from_rgba_premultiplied(245, 245, 250, 255) };
+                let input_stroke = if is_dark { egui::Color32::from_rgba_premultiplied(80, 80, 100, 255) } else { egui::Color32::from_rgba_premultiplied(200, 200, 215, 255) };
+
                 egui::Frame::none()
-                    .fill(egui::Color32::from_rgba_premultiplied(35, 35, 40, 255))
-                    .stroke(egui::Stroke::new(
-                        1.0,
-                        egui::Color32::from_rgba_premultiplied(80, 80, 100, 255),
-                    ))
-                    .rounding(0.0)
-                    .inner_margin(egui::Margin::symmetric(16.0, 12.0))
+                    .fill(input_fill)
+                    .stroke(egui::Stroke::new(1.0, input_stroke))
+                    .rounding(10.0) // rounded search bar
+                    .inner_margin(egui::Margin::symmetric(14.0, 10.0))
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.label(
                                 egui::RichText::new(egui_phosphor::regular::MAGNIFYING_GLASS)
                                     .size(16.0)
-                                    .color(egui::Color32::from_gray(150)),
+                                    .color(if is_dark { egui::Color32::from_gray(150) } else { egui::Color32::from_gray(100) }),
                             );
                             ui.add_space(8.0);
 
@@ -312,20 +343,16 @@ impl eframe::App for LauncherApp {
                                 let is_selected = i == self.selected_index;
 
                                 let item_frame = egui::Frame::none()
-                                    .rounding(0.0)
-                                    .inner_margin(egui::Margin::symmetric(16.0, 10.0))
+                                    .rounding(8.0) // rounded list items like Raycast/Spotlight
+                                    .inner_margin(egui::Margin::symmetric(12.0, 8.0))
                                     .fill(if is_selected {
-                                        egui::Color32::from_rgba_premultiplied(50, 50, 70, 255)
+                                        if is_dark { egui::Color32::from_rgba_premultiplied(50, 50, 70, 255) } else { egui::Color32::from_rgba_premultiplied(210, 210, 225, 255) }
                                     } else {
                                         egui::Color32::TRANSPARENT
                                     })
                                     .stroke(if is_selected {
-                                        egui::Stroke::new(
-                                            1.0,
-                                            egui::Color32::from_rgba_unmultiplied(
-                                                100, 100, 150, 100,
-                                            ),
-                                        )
+                                        let stroke_color = if is_dark { egui::Color32::from_rgba_unmultiplied(100, 100, 150, 100) } else { egui::Color32::from_rgba_unmultiplied(160, 160, 180, 150) };
+                                        egui::Stroke::new(1.0, stroke_color)
                                     } else {
                                         egui::Stroke::NONE
                                     });
@@ -354,9 +381,9 @@ impl eframe::App for LauncherApp {
                                         ui.add_space(12.0);
 
                                         let text_color = if is_selected {
-                                            egui::Color32::WHITE
+                                            if is_dark { egui::Color32::WHITE } else { egui::Color32::BLACK }
                                         } else {
-                                            egui::Color32::from_gray(180)
+                                            if is_dark { egui::Color32::from_gray(180) } else { egui::Color32::from_gray(80) }
                                         };
 
                                         ui.vertical(|ui| {
@@ -383,7 +410,7 @@ impl eframe::App for LauncherApp {
                                                             ui.label(
                                                                 egui::RichText::new(tag)
                                                                     .size(10.0)
-                                                                    .color(egui::Color32::from_gray(100)),
+                                                                    .color(if is_dark { egui::Color32::from_gray(100) } else { egui::Color32::from_gray(120) }),
                                                             );
                                                         },
                                                     );
@@ -391,9 +418,9 @@ impl eframe::App for LauncherApp {
                                             });
 
                                             let subtitle_color = if is_selected {
-                                                egui::Color32::from_gray(150)
+                                                if is_dark { egui::Color32::from_gray(150) } else { egui::Color32::from_gray(100) }
                                             } else {
-                                                egui::Color32::from_gray(100)
+                                                if is_dark { egui::Color32::from_gray(100) } else { egui::Color32::from_gray(140) }
                                             };
                                             let subtitle = if path_str.starts_with("MATH:") {
                                                 "Pressione Enter para copiar o resultado".to_string()
@@ -418,8 +445,9 @@ impl eframe::App for LauncherApp {
                         });
                 } else if self.search_query.trim().starts_with("g ") {
                     ui.add_space(8.0);
+                    let g_fill = if is_dark { egui::Color32::from_rgba_premultiplied(30, 35, 50, 255) } else { egui::Color32::from_rgba_premultiplied(230, 235, 245, 255) };
                     egui::Frame::none()
-                        .fill(egui::Color32::from_rgba_premultiplied(30, 35, 50, 255))
+                        .fill(g_fill)
                         .inner_margin(12.0)
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {

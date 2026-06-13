@@ -85,3 +85,12 @@ pub fn load() -> Config {
         cfg
     }
 }
+
+pub fn save(config: &Config) -> std::io::Result<()> {
+    let path = config_path();
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let toml_str = toml::to_string_pretty(config).unwrap_or_default();
+    fs::write(&path, toml_str)
+}

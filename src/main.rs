@@ -17,12 +17,36 @@ use std::sync::{
 };
 use std::thread;
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem},
-    Icon, TrayIconBuilder,
+    menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, PredefinedMenuItem},
+    Icon, TrayIconBuilder, TrayIconEvent,
 };
+use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
+use winreg::RegKey;
+
+fn is_autostart_enabled() -> bool {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(run) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run") {
+        let val: Result<String, _> = run.get_value("GlimpseLauncher");
+        return val.is_ok();
+    }
+    false
+}
+
+fn toggle_autostart(enable: bool) {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(run) = hkcu.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_SET_VALUE) {
+        if enable {
+            if let Ok(exe) = std::env::current_exe() {
+                let _ = run.set_value("GlimpseLauncher", &exe.to_string_lossy().to_string());
+            }
+        } else {
+            let _ = run.delete_value("GlimpseLauncher");
+        }
+    }
+}
 use ui::LauncherApp;
 
-fn create_tray_icon() -> Option<tray_icon::TrayIcon> {
+fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon::TrayIcon> {
     let icon_data = include_bytes!("../public/icon.png");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
@@ -38,10 +62,15 @@ fn create_tray_icon() -> Option<tray_icon::TrayIcon> {
     };
 
     let tray_menu = Menu::new();
-    let quit_i = MenuItem::new("Sair do Launcher", true, None);
+    
+    let theme_i = MenuItem::with_id("theme_toggle", "Alternar Modo Claro/Escuro", true, None);
+    let autostart_i = CheckMenuItem::with_id("autostart_toggle", "Iniciar junto ao Windows", true, is_autostart_enabled(), None);
+    let quit_i = MenuItem::with_id("quit_app", "Sair", true, None);
+    
+    let _ = tray_menu.append(&theme_i);
+    let _ = tray_menu.append(&autostart_i);
+    let _ = tray_menu.append(&PredefinedMenuItem::separator());
     let _ = tray_menu.append(&quit_i);
-
-    let quit_id = quit_i.id().clone();
 
     let tray_icon = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
@@ -52,10 +81,41 @@ fn create_tray_icon() -> Option<tray_icon::TrayIcon> {
 
     thread::spawn(move || {
         let menu_channel = MenuEvent::receiver();
-        while let Ok(event) = menu_channel.recv() {
-            if event.id == quit_id {
-                std::process::exit(0);
+        let tray_channel = TrayIconEvent::receiver();
+        loop {
+            if let Ok(event) = menu_channel.try_recv() {
+                if event.id == "quit_app" {
+                    std::process::exit(0);
+                } else if event.id == "autostart_toggle" {
+                    let is_checked = is_autostart_enabled();
+                    toggle_autostart(!is_checked);
+                } else if event.id == "theme_toggle" {
+                    let mut config = crate::config::load();
+                    let is_dark = config.theme.as_ref().and_then(|t| t.background_rgba).map_or(true, |rgba| rgba[0] < 100);
+                    let new_theme = if is_dark {
+                        // Light mode
+                        crate::config::ThemeConfig {
+                            background_rgba: Some([240, 240, 245, 230]),
+                            blur_radius: None,
+                        }
+                    } else {
+                        // Dark mode
+                        crate::config::ThemeConfig {
+                            background_rgba: Some([20, 20, 22, 200]),
+                            blur_radius: None,
+                        }
+                    };
+                    config.theme = Some(new_theme);
+                    let _ = crate::config::save(&config);
+                    let _ = tx_focus.send(()); // Focus to show the updated theme
+                }
             }
+            if let Ok(event) = tray_channel.try_recv() {
+                if let tray_icon::TrayIconEvent::Click { button: tray_icon::MouseButton::Left, .. } = event {
+                    let _ = tx_focus.send(());
+                }
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
         }
     });
 
@@ -112,6 +172,7 @@ fn main() -> Result<(), eframe::Error> {
 
     let is_visible = Arc::new(AtomicBool::new(false));
     let app_visibility = is_visible.clone();
+    let tx_tray = tx.clone();
 
     eframe::run_native(
         "Native Launcher",
@@ -121,7 +182,7 @@ fn main() -> Result<(), eframe::Error> {
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
             cc.egui_ctx.set_fonts(fonts);
 
-            if let Some(tray) = create_tray_icon() {
+            if let Some(tray) = create_tray_icon(tx_tray.clone()) {
                 Box::leak(Box::new(tray));
             }
 
