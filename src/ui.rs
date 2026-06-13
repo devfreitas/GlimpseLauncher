@@ -59,21 +59,9 @@ impl LauncherApp {
 
         if query.starts_with("g ") && query.len() > 2 {
             let search_term = &query[2..];
-            let url = format!(
-                "https://www.google.com/search?q={}",
-                search_term.replace(' ', "+")
-            );
-            let path = HSTRING::from(url);
-            unsafe {
-                ShellExecuteW(
-                    None,
-                    w!("open"),
-                    &path,
-                    PCWSTR::null(),
-                    PCWSTR::null(),
-                    SW_SHOWNORMAL,
-                );
-            }
+            let encoded_term = urlencoding::encode(search_term);
+            let url = format!("https://www.google.com/search?q={}", encoded_term);
+            let _ = webbrowser::open(&url);
             self.hide(ctx);
             return;
         }
