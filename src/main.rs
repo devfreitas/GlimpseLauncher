@@ -88,6 +88,10 @@ fn main() -> Result<(), eframe::Error> {
         "Native Launcher",
         options,
         Box::new(move |cc| {
+            let mut fonts = egui::FontDefinitions::default();
+            egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
+            cc.egui_ctx.set_fonts(fonts);
+
             if let Some(tray) = create_tray_icon() {
                 Box::leak(Box::new(tray));
             }

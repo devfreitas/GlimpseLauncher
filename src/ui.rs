@@ -233,7 +233,7 @@ impl eframe::App for LauncherApp {
                     .show(ui, |ui| {
                         ui.horizontal(|ui| {
                             ui.label(
-                                egui::RichText::new("🔍")
+                                egui::RichText::new(egui_phosphor::regular::MAGNIFYING_GLASS)
                                     .size(16.0)
                                     .color(egui::Color32::from_gray(150)),
                             );
@@ -320,9 +320,9 @@ impl eframe::App for LauncherApp {
                                     ui.set_width(ui.available_width());
                                     ui.horizontal(|ui| {
                                         if app.is_dir {
-                                            ui.label(egui::RichText::new("📁").size(18.0));
+                                            ui.label(egui::RichText::new(egui_phosphor::regular::FOLDER).size(18.0));
                                         } else {
-                                            ui.label(egui::RichText::new("⚙️").size(18.0)); // executable icon
+                                            ui.label(egui::RichText::new(egui_phosphor::regular::MAGNIFYING_GLASS).size(18.0)); // executable icon
                                         }
 
                                         ui.add_space(12.0);
@@ -375,7 +375,7 @@ impl eframe::App for LauncherApp {
                         .inner_margin(12.0)
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                ui.label(egui::RichText::new("🌐").size(16.0));
+                                ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(16.0));
                                 ui.add_space(8.0);
                                 ui.label(
                                     egui::RichText::new(format!(
