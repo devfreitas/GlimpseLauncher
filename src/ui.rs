@@ -34,9 +34,11 @@ impl LauncherApp {
     pub fn new(is_visible: Arc<AtomicBool>) -> Self {
         let (tx, rx) = crossbeam_channel::unbounded();
 
+        let tx_clone = tx.clone();
         std::thread::spawn(move || {
-            let index = build_index();
-            let _ = tx.send(index);
+            let index = crate::indexer::build_index(false);
+            let _ = tx_clone.send(index);
+            crate::indexer::start_watcher(tx_clone);
         });
 
         Self {
@@ -123,14 +125,12 @@ impl LauncherApp {
 
 impl eframe::App for LauncherApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        if self.is_indexing {
-            if let Ok(new_index) = self.index_receiver.try_recv() {
-                self.index = new_index;
-                self.is_indexing = false;
+        if let Ok(new_index) = self.index_receiver.try_recv() {
+            self.index = new_index;
+            self.is_indexing = false;
 
-                if !self.search_query.trim().starts_with("g ") {
-                    self.filtered = search_apps(self.search_query.trim(), &self.index);
-                }
+            if !self.search_query.trim().starts_with("g ") {
+                self.filtered = search_apps(self.search_query.trim(), &self.index);
             }
         }
 

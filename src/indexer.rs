@@ -4,6 +4,64 @@ use std::process::Command;
 use winreg::RegKey;
 use winreg::enums::{HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER, KEY_READ};
 
+use windows::core::ComInterface;
+use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED, CoTaskMemFree};
+use windows::Win32::UI::Shell::{
+    SHGetKnownFolderItem, FOLDERID_AppsFolder, IShellItem, IEnumShellItems, BHID_EnumItems,
+    SIGDN_NORMALDISPLAY, IShellItem2,
+};
+use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
+
+const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
+    fmtid: windows::core::GUID::from_u128(0x9F4C2855_9F79_4B39_A8D0_E1D42DE1D5F3),
+    pid: 5,
+};
+
+fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
+    unsafe {
+        let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+        
+        let apps_folder: IShellItem = match SHGetKnownFolderItem(
+            &FOLDERID_AppsFolder,
+            windows::Win32::UI::Shell::KF_FLAG_DEFAULT,
+            None,
+        ) {
+            Ok(f) => f,
+            Err(_) => return,
+        };
+        
+        let enum_items_result: windows::core::Result<IEnumShellItems> = apps_folder.BindToHandler(None, &BHID_EnumItems);
+        if let Ok(enum_items) = enum_items_result {
+            let mut fetched = 0;
+            let mut items: [Option<IShellItem>; 1] = [None; 1];
+            while enum_items.Next(&mut items, Some(&mut fetched)).is_ok() && fetched == 1 {
+                if let Some(item) = &items[0] {
+                    if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
+                        let name = name_pwstr.to_string().unwrap_or_default();
+                        if let Ok(item2) = item.cast::<IShellItem2>() {
+                            if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
+                                let aumid = aumid_pwstr.to_string().unwrap_or_default();
+                                
+                                if !name.is_empty() && !is_blacklisted(&name) && !aumid.contains("Internal") {
+                                    let path = PathBuf::from(format!("UWP:{}", aumid));
+                                    index.push(AppEntry {
+                                        name: name.clone(),
+                                        path,
+                                        priority: 100,
+                                        is_dir: false,
+                                    });
+                                }
+                                CoTaskMemFree(Some(aumid_pwstr.0 as _));
+                            }
+                        }
+                        CoTaskMemFree(Some(name_pwstr.0 as _));
+                    }
+                }
+            }
+        }
+    }
+}
+
 fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
     let roots = [
         (RegKey::predef(HKEY_LOCAL_MACHINE), "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"),
@@ -259,9 +317,11 @@ fn base_name(name: &str) -> String {
     result.trim().to_string()
 }
 
-pub fn build_index() -> Vec<AppEntry> {
-    if let Some(saved) = load_index() {
-        return saved;
+pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
+    if !force_rebuild {
+        if let Some(saved) = load_index() {
+            return saved;
+        }
     }
     let mut index = Vec::new();
 
@@ -272,33 +332,7 @@ pub fn build_index() -> Vec<AppEntry> {
     let sys_start_menu = Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs");
     scan_directory(sys_start_menu, &mut index, &["lnk"], 5, false);
 
-    if let Ok(output) = Command::new("powershell")
-        .args(&[
-            "-NoProfile",
-            "-Command",
-            "chcp 65001 >$null; Get-StartApps | ForEach-Object { \"$($_.Name)|$($_.AppID)\" }",
-        ])
-        .output()
-    {
-        let result_string = String::from_utf8_lossy(&output.stdout);
-        for line in result_string.lines() {
-            let parts: Vec<&str> = line.splitn(2, '|').collect();
-            if parts.len() == 2 {
-                let name = parts[0].trim().to_string();
-                let app_id = parts[1].trim().to_string();
-
-                if !name.is_empty() && !is_blacklisted(&name) && !app_id.contains("Internal") {
-                    let path = PathBuf::from(format!("UWP:{}", app_id));
-                    index.push(AppEntry {
-                        name,
-                        path,
-                        priority: 100,
-                        is_dir: false,
-                    });
-                }
-            }
-        }
-    }
+    scan_uwp_apps(&mut index);
 
     scan_uninstall_registry(&mut index);
 
@@ -442,5 +476,46 @@ fn load_index() -> Option<Vec<AppEntry>> {
             Err(_) => None,
         },
         Err(_) => None,
+    }
+}
+
+pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
+    use notify_debouncer_mini::{new_debouncer, notify::RecursiveMode};
+    use std::time::Duration;
+
+    let (debouncer_tx, debouncer_rx) = std::sync::mpsc::channel();
+    let mut debouncer = match new_debouncer(Duration::from_secs(2), debouncer_tx) {
+        Ok(d) => d,
+        Err(_) => return,
+    };
+
+    let watcher = debouncer.watcher();
+
+    if let Some(mut user_path) = dirs::data_dir() {
+        user_path.push("Microsoft\\Windows\\Start Menu\\Programs");
+        let _ = watcher.watch(&user_path, RecursiveMode::Recursive);
+    }
+    let _ = watcher.watch(Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs"), RecursiveMode::Recursive);
+    
+    if let Some(desktop) = dirs::desktop_dir() {
+        let _ = watcher.watch(&desktop, RecursiveMode::NonRecursive);
+    }
+    if let Some(docs) = dirs::document_dir() {
+        let _ = watcher.watch(&docs, RecursiveMode::NonRecursive);
+    }
+    if let Some(pics) = dirs::picture_dir() {
+        let _ = watcher.watch(&pics, RecursiveMode::NonRecursive);
+    }
+    if let Some(downloads) = dirs::download_dir() {
+        let _ = watcher.watch(&downloads, RecursiveMode::NonRecursive);
+    }
+
+    for res in debouncer_rx {
+        if let Ok(events) = res {
+            if !events.is_empty() {
+                let new_index = build_index(true);
+                let _ = tx.send(new_index);
+            }
+        }
     }
 }
