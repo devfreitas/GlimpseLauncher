@@ -6,7 +6,7 @@ use windows::Win32::UI::Shell::{
 };
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
 
-const PKEY_AppUserModel_ID: PROPERTYKEY = PROPERTYKEY {
+const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
     fmtid: windows::core::GUID::from_u128(0x9F4C2855_9F79_4B39_A8D0_E1D42DE1D5F3),
     pid: 5,
 };
@@ -36,7 +36,7 @@ fn main() {
                 if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
                     let name = name_pwstr.to_string().unwrap_or_default();
                     if let Ok(item2) = item.cast::<IShellItem2>() {
-                        if let Ok(aumid_pwstr) = item2.GetString(&PKEY_AppUserModel_ID) {
+                        if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
                             let aumid = aumid_pwstr.to_string().unwrap_or_default();
                             println!("Name: {}, AUMID: {}", name, aumid);
                             CoTaskMemFree(Some(aumid_pwstr.0 as _));

@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::process::Command;
 use winreg::RegKey;
 use winreg::enums::{HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER, KEY_READ};
 
@@ -38,15 +37,16 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
                 if let Some(item) = &items[0] {
                     if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
                         let name = name_pwstr.to_string().unwrap_or_default();
+                        let name_lower = name.to_lowercase();
                         if let Ok(item2) = item.cast::<IShellItem2>() {
                             if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
                                 let aumid = aumid_pwstr.to_string().unwrap_or_default();
                                 
                                 if !name.is_empty() && !is_blacklisted(&name) && !aumid.contains("Internal") {
-                                    let path = PathBuf::from(format!("UWP:{}", aumid));
                                     index.push(AppEntry {
                                         name: name.clone(),
-                                        path,
+                                        name_lower,
+                                        path: PathBuf::from(format!("UWP:{}", aumid)),
                                         priority: 100,
                                         is_dir: false,
                                     });
@@ -80,7 +80,8 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
                             Some(PathBuf::from(first.trim_matches('"')))
                         }).unwrap_or_else(|| PathBuf::new());
                         index.push(AppEntry {
-                            name,
+                            name: name.clone(),
+                            name_lower: name.to_lowercase(),
                             path: exe_path,
                             priority: 80,
                             is_dir: false,
@@ -96,9 +97,10 @@ use walkdir::WalkDir;
 use serde::{Serialize, Deserialize};
 use bincode::{Encode, Decode};
 
-#[derive(Clone, Debug, Serialize, Deserialize, Encode, Decode)]
+#[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AppEntry {
     pub name: String,
+    pub name_lower: String,
     pub path: PathBuf,
     pub priority: u8,
     pub is_dir: bool,
@@ -347,8 +349,11 @@ pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
     for tool in system_tools {
         let path = PathBuf::from("C:\\Windows\\System32").join(tool);
         if path.exists() {
+            let name = tool.replace(".exe", "");
+            let name_lower = name.to_lowercase();
             index.push(AppEntry {
-                name: tool.replace(".exe", "").to_string(),
+                name,
+                name_lower,
                 path,
                 priority: 9,
                 is_dir: false,
@@ -357,16 +362,16 @@ pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
     }
 
     if let Some(desktop) = dirs::desktop_dir() {
-        scan_directory(&desktop, &mut index, &["lnk", "exe"], 1, true);
+        scan_directory(&desktop, &mut index, &["lnk", "exe", "pdf", "docx", "txt", "png", "jpg", "zip"], 3, true);
     }
     if let Some(docs) = dirs::document_dir() {
-        scan_directory(&docs, &mut index, &["lnk"], 1, true);
+        scan_directory(&docs, &mut index, &["lnk", "pdf", "docx", "xlsx", "txt", "csv", "pptx"], 3, true);
     }
     if let Some(pics) = dirs::picture_dir() {
-        scan_directory(&pics, &mut index, &["lnk"], 1, true);
+        scan_directory(&pics, &mut index, &["lnk", "png", "jpg", "jpeg", "gif", "bmp", "svg"], 3, true);
     }
     if let Some(downloads) = dirs::download_dir() {
-        scan_directory(&downloads, &mut index, &["lnk", "exe"], 1, true);
+        scan_directory(&downloads, &mut index, &["lnk", "exe", "pdf", "zip", "rar", "7z", "msi", "iso"], 3, true);
     }
 
     let mut groups: HashMap<String, AppEntry> = HashMap::with_capacity(index.len());
@@ -417,6 +422,7 @@ fn scan_directory(
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
+        let name_lower = name.to_lowercase();
 
         if is_blacklisted(&name) {
             continue;
@@ -428,6 +434,7 @@ fn scan_directory(
                     let priority = calculate_priority(path, false);
                     index.push(AppEntry {
                         name,
+                        name_lower,
                         path: path.to_path_buf(),
                         priority,
                         is_dir: false,
@@ -439,6 +446,7 @@ fn scan_directory(
                 let priority = calculate_priority(path, false);
                 index.push(AppEntry {
                     name,
+                    name_lower,
                     path: path.to_path_buf(),
                     priority,
                     is_dir: true,

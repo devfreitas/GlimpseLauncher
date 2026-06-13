@@ -1,4 +1,4 @@
-use crate::indexer::{build_index, AppEntry};
+use crate::indexer::AppEntry;
 use crate::search::search_apps;
 use eframe::egui;
 use crate::config::{ThemeConfig, load};
@@ -68,8 +68,24 @@ impl LauncherApp {
             return;
         }
 
+        if query.starts_with("> ") && query.len() > 2 {
+            let cmd = &query[2..];
+            let _ = std::process::Command::new("cmd")
+                .args(&["/C", "start", "cmd.exe", "/K", cmd])
+                .spawn();
+            self.hide(ctx);
+            return;
+        }
+
         if let Some(app) = self.filtered.get(self.selected_index) {
             let path_str = app.path.to_str().unwrap_or("");
+
+            if path_str.starts_with("MATH:") {
+                let result = &path_str[5..];
+                ctx.output_mut(|o| o.copied_text = result.to_string());
+                self.hide(ctx);
+                return;
+            }
 
             if !self.launched_paths.contains(path_str) {
                 self.launched_paths.insert(path_str.to_string());
@@ -239,10 +255,20 @@ impl eframe::App for LauncherApp {
 
                             if response.changed() {
                                 let query = self.search_query.trim();
-                                if query.starts_with("g ") {
+                                if query.starts_with("g ") || query.starts_with("> ") {
                                     self.filtered.clear();
                                 } else {
                                     self.filtered = search_apps(query, &self.index);
+                                    
+                                    if let Ok(result) = meval::eval_str(query) {
+                                        self.filtered.insert(0, crate::indexer::AppEntry {
+                                            name: result.to_string(),
+                                            name_lower: result.to_string(),
+                                            path: std::path::PathBuf::from(format!("MATH:{}", result)),
+                                            priority: 255,
+                                            is_dir: false,
+                                        });
+                                    }
                                 }
                                 self.selected_index = 0;
                             }
@@ -307,11 +333,23 @@ impl eframe::App for LauncherApp {
                                 let response = item_frame.show(ui, |ui| {
                                     ui.set_width(ui.available_width());
                                     ui.horizontal(|ui| {
-                                        if app.is_dir {
-                                            ui.label(egui::RichText::new(egui_phosphor::regular::FOLDER).size(18.0));
+                                        let path_str = app.path.to_string_lossy();
+                                        let is_file = !app.is_dir 
+                                            && !path_str.starts_with("MATH:") 
+                                            && !path_str.starts_with("UWP:") 
+                                            && !path_str.to_lowercase().ends_with(".exe") 
+                                            && !path_str.to_lowercase().ends_with(".lnk");
+
+                                        let icon = if path_str.starts_with("MATH:") {
+                                            egui_phosphor::regular::CALCULATOR
+                                        } else if app.is_dir {
+                                            egui_phosphor::regular::FOLDER
+                                        } else if is_file {
+                                            egui_phosphor::regular::FILE_TEXT
                                         } else {
-                                            ui.label(egui::RichText::new(egui_phosphor::regular::MAGNIFYING_GLASS).size(18.0)); // executable icon
-                                        }
+                                            egui_phosphor::regular::ROCKET
+                                        };
+                                        ui.label(egui::RichText::new(icon).size(18.0));
 
                                         ui.add_space(12.0);
 
@@ -321,33 +359,55 @@ impl eframe::App for LauncherApp {
                                             egui::Color32::from_gray(180)
                                         };
 
-                                        ui.label(
-                                            egui::RichText::new(&app.name)
-                                                .color(text_color)
-                                                .size(14.0),
-                                        );
+                                        ui.vertical(|ui| {
+                                            ui.horizontal(|ui| {
+                                                ui.label(
+                                                    egui::RichText::new(&app.name)
+                                                        .color(text_color)
+                                                        .size(16.0),
+                                                );
 
-                                        if is_selected {
-                                            ui.with_layout(
-                                                egui::Layout::right_to_left(egui::Align::Center),
-                                                |ui| {
-                                                    let tag = if app
-                                                        .path
-                                                        .to_string_lossy()
-                                                        .starts_with("UWP:")
-                                                    {
-                                                        "APP"
-                                                    } else {
-                                                        "EXE"
-                                                    };
-                                                    ui.label(
-                                                        egui::RichText::new(tag)
-                                                            .size(9.0)
-                                                            .color(egui::Color32::from_gray(80)),
+                                                if is_selected {
+                                                    ui.with_layout(
+                                                        egui::Layout::right_to_left(egui::Align::Center),
+                                                        |ui| {
+                                                            let tag = if path_str.starts_with("MATH:") {
+                                                                "CALC"
+                                                            } else if path_str.starts_with("UWP:") {
+                                                                "APP"
+                                                            } else if is_file {
+                                                                "FILE"
+                                                            } else {
+                                                                "EXE"
+                                                            };
+                                                            ui.label(
+                                                                egui::RichText::new(tag)
+                                                                    .size(10.0)
+                                                                    .color(egui::Color32::from_gray(100)),
+                                                            );
+                                                        },
                                                     );
-                                                },
+                                                }
+                                            });
+
+                                            let subtitle_color = if is_selected {
+                                                egui::Color32::from_gray(150)
+                                            } else {
+                                                egui::Color32::from_gray(100)
+                                            };
+                                            let subtitle = if path_str.starts_with("MATH:") {
+                                                "Pressione Enter para copiar o resultado".to_string()
+                                            } else if path_str.starts_with("UWP:") {
+                                                "Aplicativo do Windows".to_string()
+                                            } else {
+                                                path_str.to_string()
+                                            };
+                                            ui.label(
+                                                egui::RichText::new(subtitle)
+                                                    .color(subtitle_color)
+                                                    .size(12.0),
                                             );
-                                        }
+                                        });
                                     });
                                 });
 
