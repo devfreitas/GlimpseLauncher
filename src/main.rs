@@ -47,7 +47,7 @@ fn toggle_autostart(enable: bool) {
 use ui::LauncherApp;
 
 fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon::TrayIcon> {
-    let icon_data = include_bytes!("../public/icon.png");
+    let icon_data = include_bytes!("../public/icone.ico");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
         .map(|image| {
@@ -74,7 +74,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
 
     let tray_icon = TrayIconBuilder::new()
         .with_menu(Box::new(tray_menu))
-        .with_tooltip("Native Launcher (Alt+S)")
+        .with_tooltip("Glimpse Launcher (Alt+S)")
         .with_icon(icon)
         .build()
         .ok()?;
@@ -175,7 +175,7 @@ fn main() -> Result<(), eframe::Error> {
     let tx_tray = tx.clone();
 
     eframe::run_native(
-        "Native Launcher",
+        "Glimpse Launcher",
         options,
         Box::new(move |cc| {
             let mut fonts = egui::FontDefinitions::default();

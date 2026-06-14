@@ -1,5 +1,5 @@
 [package]
-name = "native_launcher"
+name = "glimpse_launcher"
 version = "0.1.0"
 edition = "2021"
 
@@ -42,3 +42,6 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+[build-dependencies]
+winres = "0.1.12"

@@ -9,44 +9,42 @@
 <br>
 
 <p align="center">
-  <b>Um lançador de buscas ultraleve e minimalista, focado em performance absoluta e baixo consumo de recursos para Windows 11.</b>
+  <b>Um lançador de buscas ultraleve e minimalista, focado em performance absoluta, design moderno e baixo consumo de recursos para Windows 11.</b>
 </p>
 
 ## Sobre o Projeto
 
-O **Glimpse Launcher** foi desenvolvido para usuários que buscam produtividade sem comprometer o desempenho do sistema. Construído inteiramente em **Rust**, o projeto aproveita a segurança de memória e a velocidade da linguagem para entregar uma interface gráfica minimalista que responde instantaneamente, seja para encontrar arquivos locais ou realizar buscas na web.
+O **Glimpse Launcher** foi desenvolvido para usuários que buscam produtividade sem comprometer o desempenho do sistema. Construído inteiramente em **Rust**, o projeto aproveita a segurança de memória e a velocidade da linguagem para entregar uma interface gráfica que responde instantaneamente, misturando a elegância de ferramentas como o *Raycast* e o *Wox*, com a leveza de um aplicativo nativo.
 
-## Diferenciais
+## Funcionalidades e Recursos
 
-- **Powered by Rust:** Performance de nível nativo com footprint de memória mínimo.
-- **Baixo Uso de Hardware:** Ideal tanto para máquinas de alto desempenho quanto para sistemas com recursos limitados.
-- **Busca Local:** Localização rápida de arquivos, pastas e aplicações no computador.
-- **Integração Web:** Atalhos inteligentes para motores de busca sem precisar abrir o navegador manualmente primeiro.
-- **Interface Minimalista:** Design "Distraction-free" focado no que importa: o resultado da busca.
+O Glimpse Launcher oferece um conjunto robusto de ferramentas e otimizações projetadas para o uso fluido e eficiente do sistema operacional:
+
+- **Busca Ultrarrápida e Inteligente:** Utiliza o motor `nucleo-matcher` (o mesmo do editor *Helix*) para um *fuzzy finding* de alta precisão e baixíssimo consumo de CPU.
+- **Eficiência e Desempenho:** Arquitetura *Singleton* com comunicação IPC (evita múltiplas instâncias em memória) e pré-processamento inteligente de índices, garantindo respostas em milissegundos.
+- **Interface Moderna e Intuitiva:** 
+  - Design premium inspirado no *Raycast* e *Wox*, com cantos arredondados, sombras dinâmicas e integração total com o Fluent Design do Windows 11.
+  - Resultados detalhados com título, subtítulo (caminhos e dicas) e tags visuais (`EXE`, `APP`, `FILE`) para rápida identificação.
+- **Personalização de Temas:** Suporte completo a Modo Claro e Modo Escuro, com paletas de cores refinadas e transição instantânea de layout.
+- **Controle via Bandeja do Sistema (Tray):**
+  - Alternância rápida entre temas.
+  - Configuração nativa para inicialização automática com o Windows.
+  - Restauração imediata do launcher.
+- **Ferramentas Produtivas Integradas:**
+  - **Calculadora Inline:** Resolva expressões matemáticas (ex: `25 * 4 / 2`) diretamente na barra de pesquisa.
+  - **Busca de Arquivos:** Localize instantaneamente seus documentos pessoais, imagens e downloads através de uma indexação inteligente de múltiplos níveis.
+  - **Atalhos Web:** Faça pesquisas rápidas na internet utilizando atalhos pré-definidos (ex: `g sua pesquisa`).
 
 ## Como Usar
 
 O **Glimpse Launcher** funciona com atalhos simples para agilizar sua produtividade:
 
-- **Abrir o Launcher:** Pressione `Alt + S` para exibir a barra de busca a qualquer momento.
-- **Busca Rápida na Web:** Utilize prefixos antes da sua pesquisa para buscar diretamente em sites específicos. Por exemplo:
-  - Digite `g sua pesquisa` para buscar no **Google**.
-  - Digite `y sua pesquisa` para buscar no **YouTube**.
+- **Abrir o Launcher:** Pressione `Alt + S` ou clique no ícone da bandeja do sistema.
+- **Busca Rápida na Web:** Utilize prefixos. Digite `g sua pesquisa` para buscar no **Google**.
 - **Busca Local:** Digite o nome de um aplicativo ou arquivo local para encontrá-lo instantaneamente.
+- **Cálculos:** Digite uma equação (ex: `15 + 50 * 2`) para obter a resposta via calculadora embutida.
 
-## Configuração
-
-O **Glimpse Launcher** é altamente configurável através de arquivos simples, permitindo definir:
-
-- Motores de busca web favoritos.
-- Diretórios de indexação para busca local.
-- Atalhos de teclado personalizados.
-
-## Contribuições
-Este é um projeto de código aberto e focado na comunidade. Se você deseja otimizar ainda mais o código ou adicionar novas funcionalidades:
-***Faça um Fork.***
-
-### Como ser um contribuidor ?
+## Como ser um contribuidor?
 
 Como o projeto é desenvolvido em Rust, você precisará do `cargo` instalado.
 
@@ -65,11 +63,10 @@ $ cargo build --release
 # 4. Execute o binário gerado
 $ .\target\release\native_launcher.exe
 ```
-- Crie uma branch: git checkout -b feature/nova-melhoria.
-- Commit suas mudanças: git commit -m 'feat: Add nova funcionalidade'.
-- Push: git push origin feature/nova-melhoria.
+- Crie uma branch: `git checkout -b feature/nova-melhoria`.
+- Commit suas mudanças: `git commit -m 'feat: Add nova funcionalidade'`.
+- Push: `git push origin feature/nova-melhoria`.
 - Abra um Pull Request.
-
 
 <br>
 
