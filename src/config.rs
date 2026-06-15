@@ -11,6 +11,9 @@ pub struct Config {
     pub start_with_windows: Option<bool>,
     pub icon_path: Option<String>,
     pub theme: Option<ThemeConfig>,
+    pub enable_calculator: Option<bool>,
+    pub enable_web_search: Option<bool>,
+    pub enable_commands: Option<bool>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -38,6 +41,9 @@ impl Default for Config {
                 blur_radius: None,
             }),
             start_with_windows: Some(false),
+            enable_calculator: Some(true),
+            enable_web_search: Some(true),
+            enable_commands: Some(true),
         }
     }
 }

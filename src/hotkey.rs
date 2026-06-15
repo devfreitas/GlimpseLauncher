@@ -1,20 +1,20 @@
 use crossbeam_channel::Sender;
 use windows::core::w;
-use windows::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, MOD_ALT};
+
+use windows::Win32::UI::Input::KeyboardAndMouse::{RegisterHotKey, MOD_ALT, MOD_NOREPEAT};
 use windows::Win32::UI::WindowsAndMessaging::{
     GetMessageW, MessageBoxW, MB_ICONERROR, MB_OK, MSG, WM_HOTKEY,
 };
 
-pub fn listen_for_hotkey(tx: Sender<()>) {
+pub fn listen_for_hotkey(tx: Sender<crate::AppMsg>) {
     unsafe {
-        let result = RegisterHotKey(None, 1, MOD_ALT, 0x53); // alt + s
+        let result = RegisterHotKey(None, 1, MOD_ALT | MOD_NOREPEAT, 0x53); // alt + s
 
         if result.is_ok() {
             let mut msg = MSG::default();
             while GetMessageW(&mut msg, None, 0, 0).into() {
                 if msg.message == WM_HOTKEY {
-                    println!("Apanhei o Alt+S! A enviar sinal para a UI...");
-                    let _ = tx.send(());
+                    let _ = tx.send(crate::AppMsg::ShowLauncher);
                 }
             }
         } else {

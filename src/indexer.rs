@@ -42,7 +42,7 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
                             if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
                                 let aumid = aumid_pwstr.to_string().unwrap_or_default();
 
-if !name.is_empty()
+                                if !name.is_empty()
                                     && !is_blacklisted(&name)
                                     && !aumid.contains("Internal")
                                 {
@@ -547,7 +547,7 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
     let _ = watcher.watch(
         Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs"),
         RecursiveMode::Recursive,
-);
+    );
 
     if let Some(desktop) = dirs::desktop_dir() {
         let _ = watcher.watch(&desktop, RecursiveMode::NonRecursive);
@@ -571,4 +571,3 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
         }
     }
 }
-

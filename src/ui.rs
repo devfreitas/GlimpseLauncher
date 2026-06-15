@@ -1,4 +1,4 @@
-use crate::config::{load, ThemeConfig};
+use crate::config::load;
 use crate::indexer::AppEntry;
 use crate::search::search_apps;
 use eframe::egui;
@@ -19,7 +19,8 @@ pub struct LauncherApp {
     filtered: Vec<AppEntry>,
     selected_index: usize,
     is_visible: Arc<AtomicBool>,
-    theme: ThemeConfig,
+    show_settings: Arc<AtomicBool>,
+    config: crate::config::Config,
     launched_paths: std::collections::HashSet<String>,
     was_visible_last_frame: bool,
     current_height: f32,
@@ -28,7 +29,7 @@ pub struct LauncherApp {
 }
 
 impl LauncherApp {
-    pub fn new(is_visible: Arc<AtomicBool>) -> Self {
+    pub fn new(is_visible: Arc<AtomicBool>, show_settings: Arc<AtomicBool>) -> Self {
         let (tx, rx) = crossbeam_channel::unbounded();
 
         let tx_clone = tx.clone();
@@ -43,8 +44,9 @@ impl LauncherApp {
             index: Vec::new(),
             filtered: Vec::new(),
             selected_index: 0,
-            theme: load().theme.unwrap_or_default(),
+            config: load(),
             is_visible,
+            show_settings,
             was_visible_last_frame: false,
             current_height: 60.0,
             index_receiver: rx,
@@ -56,7 +58,7 @@ impl LauncherApp {
     fn execute_selected(&mut self, ctx: &egui::Context) {
         let query = self.search_query.trim();
 
-        if query.starts_with("g ") && query.len() > 2 {
+        if query.starts_with("g ") && query.len() > 2 && self.config.enable_web_search.unwrap_or(true) {
             let search_term = &query[2..];
             let encoded_term = urlencoding::encode(search_term);
             let url = format!("https://www.google.com/search?q={}", encoded_term);
@@ -65,8 +67,13 @@ impl LauncherApp {
             return;
         }
 
-        if query.starts_with("> ") && query.len() > 2 {
+        if query.starts_with("> ") && query.len() > 2 && self.config.enable_commands.unwrap_or(true) {
             let cmd = &query[2..];
+            if cmd.trim() == "config" || cmd.trim() == "settings" {
+                self.show_settings.store(true, Ordering::SeqCst);
+                self.search_query.clear();
+                return;
+            }
             let _ = std::process::Command::new("cmd")
                 .args(&["/C", "start", "cmd.exe", "/K", cmd])
                 .spawn();
@@ -159,9 +166,7 @@ impl eframe::App for LauncherApp {
         }
         let just_opened = current_visibility && !self.was_visible_last_frame;
         if just_opened {
-            if let Some(t) = crate::config::load().theme {
-                self.theme = t;
-            }
+            self.config = crate::config::load();
         }
         self.was_visible_last_frame = current_visibility;
 
@@ -187,6 +192,52 @@ impl eframe::App for LauncherApp {
             ctx.send_viewport_cmd(egui::ViewportCommand::Focus);
         }
 
+        if self.show_settings.load(Ordering::SeqCst) {
+            ctx.show_viewport_immediate(
+                egui::ViewportId::from_hash_of("settings_viewport"),
+                egui::ViewportBuilder::default()
+                    .with_title("Configurações - Glimpse Launcher")
+                    .with_inner_size([400.0, 300.0]),
+                |ctx, class| {
+                    if class == egui::ViewportClass::Deferred {
+                        return;
+                    }
+                    
+                    let mut config_changed = false;
+                    egui::CentralPanel::default().show(ctx, |ui| {
+                        ui.heading("Configurações");
+                        ui.separator();
+                        
+                        let mut calc_enabled = self.config.enable_calculator.unwrap_or(true);
+                        if ui.checkbox(&mut calc_enabled, "Habilitar Calculadora (Ex: 2 + 2)").changed() {
+                            self.config.enable_calculator = Some(calc_enabled);
+                            config_changed = true;
+                        }
+                        
+                        let mut web_enabled = self.config.enable_web_search.unwrap_or(true);
+                        if ui.checkbox(&mut web_enabled, "Habilitar Pesquisa na Web (g ... )").changed() {
+                            self.config.enable_web_search = Some(web_enabled);
+                            config_changed = true;
+                        }
+                        
+                        let mut cmd_enabled = self.config.enable_commands.unwrap_or(true);
+                        if ui.checkbox(&mut cmd_enabled, "Habilitar Comandos de Terminal (> ... )").changed() {
+                            self.config.enable_commands = Some(cmd_enabled);
+                            config_changed = true;
+                        }
+                    });
+                    
+                    if config_changed {
+                        let _ = crate::config::save(&self.config);
+                    }
+                    
+                    if ctx.input(|i| i.viewport().close_requested()) {
+                        self.show_settings.store(false, Ordering::SeqCst);
+                    }
+                }
+            );
+        }
+
         if !current_visibility {
             return;
         }
@@ -206,7 +257,8 @@ impl eframe::App for LauncherApp {
                 self.current_height,
             )));
         }
-        let bg = self.theme.background_rgba.unwrap_or([20, 20, 22, 200]);
+        let theme = self.config.theme.clone().unwrap_or_default();
+        let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
         let is_dark = bg[0] < 100;
 
         let mut visuals = ctx.style().visuals.clone();
@@ -309,19 +361,23 @@ impl eframe::App for LauncherApp {
                                 } else {
                                     self.filtered = search_apps(query, &self.index);
 
-                                    if let Ok(result) = meval::eval_str(query) {
-                                        self.filtered.insert(
-                                            0,
-                                            crate::indexer::AppEntry {
-                                                name: result.to_string(),
-                                                path: std::path::PathBuf::from(format!(
-                                                    "MATH:{}",
-                                                    result
-                                                )),
-                                                priority: 255,
-                                                is_dir: false,
-                                            },
-                                        );
+                                    if self.config.enable_calculator.unwrap_or(true) {
+                                        if let Ok(result) = evalexpr::eval(query) {
+                                            if let evalexpr::Value::Int(_) | evalexpr::Value::Float(_) = result {
+                                                self.filtered.insert(
+                                                    0,
+                                                    crate::indexer::AppEntry {
+                                                        name: result.to_string(),
+                                                        path: std::path::PathBuf::from(format!(
+                                                            "MATH:{}",
+                                                            result
+                                                        )),
+                                                        priority: 255,
+                                                        is_dir: false,
+                                                    },
+                                                );
+                                            }
+                                        }
                                     }
                                 }
                                 self.selected_index = 0;

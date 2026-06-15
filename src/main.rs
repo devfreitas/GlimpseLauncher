@@ -49,7 +49,12 @@ fn toggle_autostart(enable: bool) {
 }
 use ui::LauncherApp;
 
-fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon::TrayIcon> {
+pub enum AppMsg {
+    ShowLauncher,
+    ShowSettings,
+}
+
+fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_icon::TrayIcon> {
     let icon_data = include_bytes!("../public/icone.ico");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
@@ -66,6 +71,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
 
     let tray_menu = Menu::new();
 
+    let settings_i = MenuItem::with_id("settings_menu", "Configurações", true, None);
     let theme_i = MenuItem::with_id("theme_toggle", "Alternar Modo Claro/Escuro", true, None);
     let autostart_i = CheckMenuItem::with_id(
         "autostart_toggle",
@@ -76,6 +82,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
     );
     let quit_i = MenuItem::with_id("quit_app", "Sair", true, None);
 
+    let _ = tray_menu.append(&settings_i);
     let _ = tray_menu.append(&theme_i);
     let _ = tray_menu.append(&autostart_i);
     let _ = tray_menu.append(&PredefinedMenuItem::separator());
@@ -95,6 +102,8 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
             if let Ok(event) = menu_channel.try_recv() {
                 if event.id == "quit_app" {
                     std::process::exit(0);
+                } else if event.id == "settings_menu" {
+                    let _ = tx_focus.send(AppMsg::ShowSettings);
                 } else if event.id == "autostart_toggle" {
                     let is_checked = is_autostart_enabled();
                     toggle_autostart(!is_checked);
@@ -120,7 +129,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
                     };
                     config.theme = Some(new_theme);
                     let _ = crate::config::save(&config);
-                    let _ = tx_focus.send(()); // Focus to show the updated theme
+                    let _ = tx_focus.send(AppMsg::ShowLauncher); // Focus to show the updated theme
                 }
             }
             if let Ok(event) = tray_channel.try_recv() {
@@ -129,7 +138,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
                     ..
                 } = event
                 {
-                    let _ = tx_focus.send(());
+                    let _ = tx_focus.send(AppMsg::ShowLauncher);
                 }
             }
             std::thread::sleep(std::time::Duration::from_millis(50));
@@ -160,7 +169,7 @@ fn main() -> Result<(), eframe::Error> {
         }
     };
 
-    let (tx, rx) = unbounded();
+    let (tx, rx) = unbounded::<AppMsg>();
 
     let tx_hotkey = tx.clone();
     thread::spawn(move || {
@@ -174,7 +183,7 @@ fn main() -> Result<(), eframe::Error> {
                 let mut conn = BufReader::new(conn);
                 let mut buffer = String::new();
                 if conn.read_line(&mut buffer).is_ok() && buffer.trim() == "FOCAR_TELA" {
-                    let _ = tx_ipc.send(());
+                    let _ = tx_ipc.send(AppMsg::ShowLauncher);
                 }
             }
         }
@@ -193,7 +202,9 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     let is_visible = Arc::new(AtomicBool::new(false));
+    let show_settings = Arc::new(AtomicBool::new(false));
     let app_visibility = is_visible.clone();
+    let app_settings = show_settings.clone();
     let tx_tray = tx.clone();
 
     eframe::run_native(
@@ -210,15 +221,23 @@ fn main() -> Result<(), eframe::Error> {
 
             let ctx = cc.egui_ctx.clone();
             let thread_visibility = is_visible.clone();
+            let thread_settings = show_settings.clone();
 
             thread::spawn(move || {
-                while rx.recv().is_ok() {
-                    thread_visibility.store(true, Ordering::SeqCst);
+                while let Ok(msg) = rx.recv() {
+                    match msg {
+                        AppMsg::ShowLauncher => {
+                            thread_visibility.store(true, Ordering::SeqCst);
+                        }
+                        AppMsg::ShowSettings => {
+                            thread_settings.store(true, Ordering::SeqCst);
+                        }
+                    }
                     ctx.request_repaint();
                 }
             });
 
-            Box::new(LauncherApp::new(app_visibility))
+            Box::new(LauncherApp::new(app_visibility, app_settings))
         }),
     )
 }
