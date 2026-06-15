@@ -294,7 +294,6 @@ impl eframe::App for LauncherApp {
                                     if let Ok(result) = meval::eval_str(query) {
                                         self.filtered.insert(0, crate::indexer::AppEntry {
                                             name: result.to_string(),
-                                            name_lower: result.to_string(),
                                             path: std::path::PathBuf::from(format!("MATH:{}", result)),
                                             priority: 255,
                                             is_dir: false,
@@ -364,8 +363,8 @@ impl eframe::App for LauncherApp {
                                         let is_file = !app.is_dir 
                                             && !path_str.starts_with("MATH:") 
                                             && !path_str.starts_with("UWP:") 
-                                            && !path_str.to_lowercase().ends_with(".exe") 
-                                            && !path_str.to_lowercase().ends_with(".lnk");
+                                            && !path_str.ends_with(".exe") && !path_str.ends_with(".EXE")
+                                            && !path_str.ends_with(".lnk") && !path_str.ends_with(".LNK");
 
                                         let icon = if path_str.starts_with("MATH:") {
                                             egui_phosphor::regular::CALCULATOR

@@ -37,7 +37,6 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
                 if let Some(item) = &items[0] {
                     if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
                         let name = name_pwstr.to_string().unwrap_or_default();
-                        let name_lower = name.to_lowercase();
                         if let Ok(item2) = item.cast::<IShellItem2>() {
                             if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
                                 let aumid = aumid_pwstr.to_string().unwrap_or_default();
@@ -45,7 +44,6 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
                                 if !name.is_empty() && !is_blacklisted(&name) && !aumid.contains("Internal") {
                                     index.push(AppEntry {
                                         name: name.clone(),
-                                        name_lower,
                                         path: PathBuf::from(format!("UWP:{}", aumid)),
                                         priority: 100,
                                         is_dir: false,
@@ -81,7 +79,6 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
                         }).unwrap_or_else(|| PathBuf::new());
                         index.push(AppEntry {
                             name: name.clone(),
-                            name_lower: name.to_lowercase(),
                             path: exe_path,
                             priority: 80,
                             is_dir: false,
@@ -100,10 +97,15 @@ use bincode::{Encode, Decode};
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AppEntry {
     pub name: String,
-    pub name_lower: String,
     pub path: PathBuf,
     pub priority: u8,
     pub is_dir: bool,
+}
+
+impl AsRef<str> for AppEntry {
+    fn as_ref(&self) -> &str {
+        &self.name
+    }
 }
 
 pub const BLACKLIST: &[&str] = &[
@@ -255,12 +257,12 @@ fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
         return 100;
     }
 
-    let p = path.to_string_lossy().to_lowercase();
+    let p = path.to_string_lossy().to_ascii_lowercase();
     let name = path
         .file_stem()
         .unwrap_or_default()
         .to_string_lossy()
-        .to_lowercase();
+        .to_ascii_lowercase();
 
     if DOCS_TERMS
         .iter()
@@ -283,17 +285,17 @@ fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
 }
 
 fn is_blacklisted(name: &str) -> bool {
-    let name_lower = name.to_lowercase();
+    let name_lower = name.to_ascii_lowercase();
     BLACKLIST.iter().any(|term| name_lower.contains(term))
 }
 
 fn is_dir_blacklisted(dir_name: &str) -> bool {
-    let d = dir_name.to_lowercase();
+    let d = dir_name.to_ascii_lowercase();
     DIR_BLACKLIST.iter().any(|term| d.contains(term))
 }
 
 fn base_name(name: &str) -> String {
-    let n = name.to_lowercase();
+    let n = name.to_ascii_lowercase();
     let suffixes = [
         " setup",
         " installer",
@@ -350,10 +352,8 @@ pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
         let path = PathBuf::from("C:\\Windows\\System32").join(tool);
         if path.exists() {
             let name = tool.replace(".exe", "");
-            let name_lower = name.to_lowercase();
             index.push(AppEntry {
                 name,
-                name_lower,
                 path,
                 priority: 9,
                 is_dir: false,
@@ -422,7 +422,6 @@ fn scan_directory(
             .unwrap_or_default()
             .to_string_lossy()
             .to_string();
-        let name_lower = name.to_lowercase();
 
         if is_blacklisted(&name) {
             continue;
@@ -433,8 +432,7 @@ fn scan_directory(
                 if allowed_extensions.contains(&ext.to_lowercase().as_str()) {
                     let priority = calculate_priority(path, false);
                     index.push(AppEntry {
-                        name,
-                        name_lower,
+                        name: name.clone(),
                         path: path.to_path_buf(),
                         priority,
                         is_dir: false,
@@ -446,7 +444,6 @@ fn scan_directory(
                 let priority = calculate_priority(path, false);
                 index.push(AppEntry {
                     name,
-                    name_lower,
                     path: path.to_path_buf(),
                     priority,
                     is_dir: true,

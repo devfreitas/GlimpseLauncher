@@ -12,3 +12,5 @@ Cargo.lock
 *.bak
 # Optional IDE files
 *.iml
+/installer/
+installer
