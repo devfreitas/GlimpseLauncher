@@ -1,15 +1,15 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use winreg::enums::{HKEY_CURRENT_USER, HKEY_LOCAL_MACHINE, KEY_READ};
 use winreg::RegKey;
-use winreg::enums::{HKEY_LOCAL_MACHINE, HKEY_CURRENT_USER, KEY_READ};
 
 use windows::core::ComInterface;
-use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED, CoTaskMemFree};
-use windows::Win32::UI::Shell::{
-    SHGetKnownFolderItem, FOLDERID_AppsFolder, IShellItem, IEnumShellItems, BHID_EnumItems,
-    SIGDN_NORMALDISPLAY, IShellItem2,
-};
+use windows::Win32::System::Com::{CoInitializeEx, CoTaskMemFree, COINIT_MULTITHREADED};
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
+use windows::Win32::UI::Shell::{
+    BHID_EnumItems, FOLDERID_AppsFolder, IEnumShellItems, IShellItem, IShellItem2,
+    SHGetKnownFolderItem, SIGDN_NORMALDISPLAY,
+};
 
 const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
     fmtid: windows::core::GUID::from_u128(0x9F4C2855_9F79_4B39_A8D0_E1D42DE1D5F3),
@@ -19,7 +19,7 @@ const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
 fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-        
+
         let apps_folder: IShellItem = match SHGetKnownFolderItem(
             &FOLDERID_AppsFolder,
             windows::Win32::UI::Shell::KF_FLAG_DEFAULT,
@@ -28,8 +28,9 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
             Ok(f) => f,
             Err(_) => return,
         };
-        
-        let enum_items_result: windows::core::Result<IEnumShellItems> = apps_folder.BindToHandler(None, &BHID_EnumItems);
+
+        let enum_items_result: windows::core::Result<IEnumShellItems> =
+            apps_folder.BindToHandler(None, &BHID_EnumItems);
         if let Ok(enum_items) = enum_items_result {
             let mut fetched = 0;
             let mut items: [Option<IShellItem>; 1] = [None; 1];
@@ -40,8 +41,11 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
                         if let Ok(item2) = item.cast::<IShellItem2>() {
                             if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
                                 let aumid = aumid_pwstr.to_string().unwrap_or_default();
-                                
-                                if !name.is_empty() && !is_blacklisted(&name) && !aumid.contains("Internal") {
+
+if !name.is_empty()
+                                    && !is_blacklisted(&name)
+                                    && !aumid.contains("Internal")
+                                {
                                     index.push(AppEntry {
                                         name: name.clone(),
                                         path: PathBuf::from(format!("UWP:{}", aumid)),
@@ -62,21 +66,33 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
 
 fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
     let roots = [
-        (RegKey::predef(HKEY_LOCAL_MACHINE), "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"),
-        (RegKey::predef(HKEY_CURRENT_USER), "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall"),
+        (
+            RegKey::predef(HKEY_LOCAL_MACHINE),
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+        ),
+        (
+            RegKey::predef(HKEY_CURRENT_USER),
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+        ),
     ];
     for (root, sub_path) in &roots {
         if let Ok(key) = root.open_subkey_with_flags(sub_path, KEY_READ) {
             for sub_name in key.enum_keys().filter_map(Result::ok) {
                 if let Ok(app_key) = key.open_subkey(&sub_name) {
                     if let Ok(name) = app_key.get_value::<String, _>("DisplayName") {
-                        if name.trim().is_empty() { continue; }
-                        let path_str: Result<String, _> = app_key.get_value("DisplayIcon")
+                        if name.trim().is_empty() {
+                            continue;
+                        }
+                        let path_str: Result<String, _> = app_key
+                            .get_value("DisplayIcon")
                             .or_else(|_| app_key.get_value("UninstallString"));
-                        let exe_path = path_str.ok().and_then(|s| {
-                            let first = s.split_whitespace().next()?;
-                            Some(PathBuf::from(first.trim_matches('"')))
-                        }).unwrap_or_else(|| PathBuf::new());
+                        let exe_path = path_str
+                            .ok()
+                            .and_then(|s| {
+                                let first = s.split_whitespace().next()?;
+                                Some(PathBuf::from(first.trim_matches('"')))
+                            })
+                            .unwrap_or_else(|| PathBuf::new());
                         index.push(AppEntry {
                             name: name.clone(),
                             path: exe_path,
@@ -90,9 +106,9 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
     }
 }
 
+use bincode::{Decode, Encode};
+use serde::{Deserialize, Serialize};
 use walkdir::WalkDir;
-use serde::{Serialize, Deserialize};
-use bincode::{Encode, Decode};
 
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AppEntry {
@@ -362,25 +378,53 @@ pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
     }
 
     if let Some(desktop) = dirs::desktop_dir() {
-        scan_directory(&desktop, &mut index, &["lnk", "exe", "pdf", "docx", "txt", "png", "jpg", "zip"], 3, true);
+        scan_directory(
+            &desktop,
+            &mut index,
+            &["lnk", "exe", "pdf", "docx", "txt", "png", "jpg", "zip"],
+            3,
+            true,
+        );
     }
     if let Some(docs) = dirs::document_dir() {
-        scan_directory(&docs, &mut index, &["lnk", "pdf", "docx", "xlsx", "txt", "csv", "pptx"], 3, true);
+        scan_directory(
+            &docs,
+            &mut index,
+            &["lnk", "pdf", "docx", "xlsx", "txt", "csv", "pptx"],
+            3,
+            true,
+        );
     }
     if let Some(pics) = dirs::picture_dir() {
-        scan_directory(&pics, &mut index, &["lnk", "png", "jpg", "jpeg", "gif", "bmp", "svg"], 3, true);
+        scan_directory(
+            &pics,
+            &mut index,
+            &["lnk", "png", "jpg", "jpeg", "gif", "bmp", "svg"],
+            3,
+            true,
+        );
     }
     if let Some(downloads) = dirs::download_dir() {
-        scan_directory(&downloads, &mut index, &["lnk", "exe", "pdf", "zip", "rar", "7z", "msi", "iso"], 3, true);
+        scan_directory(
+            &downloads,
+            &mut index,
+            &["lnk", "exe", "pdf", "zip", "rar", "7z", "msi", "iso"],
+            3,
+            true,
+        );
     }
 
     let mut groups: HashMap<String, AppEntry> = HashMap::with_capacity(index.len());
     for entry in index {
         let key = base_name(&entry.name);
-        if key.is_empty() { continue; }
+        if key.is_empty() {
+            continue;
+        }
         match groups.get(&key) {
             Some(existing) if existing.priority >= entry.priority => {}
-            _ => { groups.insert(key, entry); }
+            _ => {
+                groups.insert(key, entry);
+            }
         }
     }
 
@@ -500,8 +544,11 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
         user_path.push("Microsoft\\Windows\\Start Menu\\Programs");
         let _ = watcher.watch(&user_path, RecursiveMode::Recursive);
     }
-    let _ = watcher.watch(Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs"), RecursiveMode::Recursive);
-    
+    let _ = watcher.watch(
+        Path::new("C:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs"),
+        RecursiveMode::Recursive,
+);
+
     if let Some(desktop) = dirs::desktop_dir() {
         let _ = watcher.watch(&desktop, RecursiveMode::NonRecursive);
     }
@@ -524,3 +571,4 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
         }
     }
 }
+

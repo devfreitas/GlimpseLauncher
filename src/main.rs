@@ -17,7 +17,7 @@ use std::sync::{
 };
 use std::thread;
 use tray_icon::{
-    menu::{Menu, MenuEvent, MenuItem, CheckMenuItem, PredefinedMenuItem},
+    menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder, TrayIconEvent,
 };
 use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
@@ -34,7 +34,10 @@ fn is_autostart_enabled() -> bool {
 
 fn toggle_autostart(enable: bool) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run) = hkcu.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_SET_VALUE) {
+    if let Ok(run) = hkcu.open_subkey_with_flags(
+        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        KEY_SET_VALUE,
+    ) {
         if enable {
             if let Ok(exe) = std::env::current_exe() {
                 let _ = run.set_value("GlimpseLauncher", &exe.to_string_lossy().to_string());
@@ -62,11 +65,17 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
     };
 
     let tray_menu = Menu::new();
-    
+
     let theme_i = MenuItem::with_id("theme_toggle", "Alternar Modo Claro/Escuro", true, None);
-    let autostart_i = CheckMenuItem::with_id("autostart_toggle", "Iniciar junto ao Windows", true, is_autostart_enabled(), None);
+    let autostart_i = CheckMenuItem::with_id(
+        "autostart_toggle",
+        "Iniciar junto ao Windows",
+        true,
+        is_autostart_enabled(),
+        None,
+    );
     let quit_i = MenuItem::with_id("quit_app", "Sair", true, None);
-    
+
     let _ = tray_menu.append(&theme_i);
     let _ = tray_menu.append(&autostart_i);
     let _ = tray_menu.append(&PredefinedMenuItem::separator());
@@ -91,7 +100,11 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
                     toggle_autostart(!is_checked);
                 } else if event.id == "theme_toggle" {
                     let mut config = crate::config::load();
-                    let is_dark = config.theme.as_ref().and_then(|t| t.background_rgba).map_or(true, |rgba| rgba[0] < 100);
+                    let is_dark = config
+                        .theme
+                        .as_ref()
+                        .and_then(|t| t.background_rgba)
+                        .map_or(true, |rgba| rgba[0] < 100);
                     let new_theme = if is_dark {
                         // Light mode
                         crate::config::ThemeConfig {
@@ -111,7 +124,11 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<()>) -> Option<tray_icon
                 }
             }
             if let Ok(event) = tray_channel.try_recv() {
-                if let tray_icon::TrayIconEvent::Click { button: tray_icon::MouseButton::Left, .. } = event {
+                if let tray_icon::TrayIconEvent::Click {
+                    button: tray_icon::MouseButton::Left,
+                    ..
+                } = event
+                {
                     let _ = tx_focus.send(());
                 }
             }
@@ -126,9 +143,14 @@ fn main() -> Result<(), eframe::Error> {
     use interprocess::local_socket::{prelude::*, GenericNamespaced, ListenerOptions, Stream};
     use std::io::{prelude::*, BufReader};
 
-    let socket_name = "glimpse_launcher_single_instance.sock".to_ns_name::<GenericNamespaced>().unwrap();
+    let socket_name = "glimpse_launcher_single_instance.sock"
+        .to_ns_name::<GenericNamespaced>()
+        .unwrap();
 
-    let listener = match ListenerOptions::new().name(socket_name.clone()).create_sync() {
+    let listener = match ListenerOptions::new()
+        .name(socket_name.clone())
+        .create_sync()
+    {
         Ok(l) => l,
         Err(_) => {
             if let Ok(mut conn) = Stream::connect(socket_name) {
@@ -200,3 +222,4 @@ fn main() -> Result<(), eframe::Error> {
         }),
     )
 }
+

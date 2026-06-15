@@ -1,7 +1,7 @@
+use crate::config::{load, ThemeConfig};
 use crate::indexer::AppEntry;
 use crate::search::search_apps;
 use eframe::egui;
-use crate::config::{ThemeConfig, load};
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -12,9 +12,6 @@ use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
 use crossbeam_channel::Receiver;
-
-
-
 
 pub struct LauncherApp {
     search_query: String,
@@ -182,7 +179,7 @@ impl eframe::App for LauncherApp {
             };
 
             ctx.send_viewport_cmd(egui::ViewportCommand::OuterPosition(center_pos));
-            
+
             if self.search_query.trim().is_empty() && !self.index.is_empty() {
                 self.filtered.clear();
             }
@@ -213,22 +210,31 @@ impl eframe::App for LauncherApp {
         let is_dark = bg[0] < 100;
 
         let mut visuals = ctx.style().visuals.clone();
-        
+
         // Ensure the OS window background is completely transparent so only our rounded frame is visible.
         visuals.window_fill = egui::Color32::TRANSPARENT;
         visuals.panel_fill = egui::Color32::TRANSPARENT;
 
         if is_dark {
-            visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(35, 35, 40, 190);
-            visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
+            visuals.widgets.inactive.bg_fill =
+                egui::Color32::from_rgba_unmultiplied(35, 35, 40, 190);
+            visuals.widgets.hovered.bg_fill =
+                egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
             visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(55, 55, 60, 220);
-            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
+            visuals.widgets.inactive.bg_stroke =
+                egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
             visuals.override_text_color = Some(egui::Color32::WHITE);
         } else {
-            visuals.widgets.inactive.bg_fill = egui::Color32::from_rgba_unmultiplied(235, 235, 240, 190);
-            visuals.widgets.hovered.bg_fill = egui::Color32::from_rgba_unmultiplied(220, 220, 225, 210);
-            visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(210, 210, 215, 220);
-            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(200, 200, 210, 120));
+            visuals.widgets.inactive.bg_fill =
+                egui::Color32::from_rgba_unmultiplied(235, 235, 240, 190);
+            visuals.widgets.hovered.bg_fill =
+                egui::Color32::from_rgba_unmultiplied(220, 220, 225, 210);
+            visuals.widgets.active.bg_fill =
+                egui::Color32::from_rgba_unmultiplied(210, 210, 215, 220);
+            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(
+                1.0,
+                egui::Color32::from_rgba_unmultiplied(200, 200, 210, 120),
+            );
             visuals.override_text_color = Some(egui::Color32::BLACK);
         }
         visuals.window_rounding = egui::Rounding::same(12.0);
@@ -248,17 +254,25 @@ impl eframe::App for LauncherApp {
             ..Default::default()
         };
         let mut visuals = ctx.style().visuals.clone();
-        visuals.widgets.inactive.bg_stroke = egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
+        visuals.widgets.inactive.bg_stroke =
+            egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
         ctx.set_visuals(visuals);
-        
 
         egui::CentralPanel::default()
             .frame(frame_style)
             .show(ctx, |ui| {
                 ui.style_mut().visuals.extreme_bg_color = egui::Color32::TRANSPARENT;
 
-                let input_fill = if is_dark { egui::Color32::from_rgba_premultiplied(35, 35, 40, 255) } else { egui::Color32::from_rgba_premultiplied(245, 245, 250, 255) };
-                let input_stroke = if is_dark { egui::Color32::from_rgba_premultiplied(80, 80, 100, 255) } else { egui::Color32::from_rgba_premultiplied(200, 200, 215, 255) };
+                let input_fill = if is_dark {
+                    egui::Color32::from_rgba_premultiplied(35, 35, 40, 255)
+                } else {
+                    egui::Color32::from_rgba_premultiplied(245, 245, 250, 255)
+                };
+                let input_stroke = if is_dark {
+                    egui::Color32::from_rgba_premultiplied(80, 80, 100, 255)
+                } else {
+                    egui::Color32::from_rgba_premultiplied(200, 200, 215, 255)
+                };
 
                 egui::Frame::none()
                     .fill(input_fill)
@@ -270,7 +284,11 @@ impl eframe::App for LauncherApp {
                             ui.label(
                                 egui::RichText::new(egui_phosphor::regular::MAGNIFYING_GLASS)
                                     .size(16.0)
-                                    .color(if is_dark { egui::Color32::from_gray(150) } else { egui::Color32::from_gray(100) }),
+                                    .color(if is_dark {
+                                        egui::Color32::from_gray(150)
+                                    } else {
+                                        egui::Color32::from_gray(100)
+                                    }),
                             );
                             ui.add_space(8.0);
 
@@ -290,14 +308,20 @@ impl eframe::App for LauncherApp {
                                     self.filtered.clear();
                                 } else {
                                     self.filtered = search_apps(query, &self.index);
-                                    
+
                                     if let Ok(result) = meval::eval_str(query) {
-                                        self.filtered.insert(0, crate::indexer::AppEntry {
-                                            name: result.to_string(),
-                                            path: std::path::PathBuf::from(format!("MATH:{}", result)),
-                                            priority: 255,
-                                            is_dir: false,
-                                        });
+                                        self.filtered.insert(
+                                            0,
+                                            crate::indexer::AppEntry {
+                                                name: result.to_string(),
+                                                path: std::path::PathBuf::from(format!(
+                                                    "MATH:{}",
+                                                    result
+                                                )),
+                                                priority: 255,
+                                                is_dir: false,
+                                            },
+                                        );
                                     }
                                 }
                                 self.selected_index = 0;
@@ -345,12 +369,26 @@ impl eframe::App for LauncherApp {
                                     .rounding(8.0) // rounded list items like Raycast/Spotlight
                                     .inner_margin(egui::Margin::symmetric(12.0, 8.0))
                                     .fill(if is_selected {
-                                        if is_dark { egui::Color32::from_rgba_premultiplied(50, 50, 70, 255) } else { egui::Color32::from_rgba_premultiplied(210, 210, 225, 255) }
+                                        if is_dark {
+                                            egui::Color32::from_rgba_premultiplied(50, 50, 70, 255)
+                                        } else {
+                                            egui::Color32::from_rgba_premultiplied(
+                                                210, 210, 225, 255,
+                                            )
+                                        }
                                     } else {
                                         egui::Color32::TRANSPARENT
                                     })
                                     .stroke(if is_selected {
-                                        let stroke_color = if is_dark { egui::Color32::from_rgba_unmultiplied(100, 100, 150, 100) } else { egui::Color32::from_rgba_unmultiplied(160, 160, 180, 150) };
+                                        let stroke_color = if is_dark {
+                                            egui::Color32::from_rgba_unmultiplied(
+                                                100, 100, 150, 100,
+                                            )
+                                        } else {
+                                            egui::Color32::from_rgba_unmultiplied(
+                                                160, 160, 180, 150,
+                                            )
+                                        };
                                         egui::Stroke::new(1.0, stroke_color)
                                     } else {
                                         egui::Stroke::NONE
@@ -360,11 +398,13 @@ impl eframe::App for LauncherApp {
                                     ui.set_width(ui.available_width());
                                     ui.horizontal(|ui| {
                                         let path_str = app.path.to_string_lossy();
-                                        let is_file = !app.is_dir 
-                                            && !path_str.starts_with("MATH:") 
-                                            && !path_str.starts_with("UWP:") 
-                                            && !path_str.ends_with(".exe") && !path_str.ends_with(".EXE")
-                                            && !path_str.ends_with(".lnk") && !path_str.ends_with(".LNK");
+                                        let is_file = !app.is_dir
+                                            && !path_str.starts_with("MATH:")
+                                            && !path_str.starts_with("UWP:")
+                                            && !path_str.ends_with(".exe")
+                                            && !path_str.ends_with(".EXE")
+                                            && !path_str.ends_with(".lnk")
+                                            && !path_str.ends_with(".LNK");
 
                                         let icon = if path_str.starts_with("MATH:") {
                                             egui_phosphor::regular::CALCULATOR
@@ -380,9 +420,17 @@ impl eframe::App for LauncherApp {
                                         ui.add_space(12.0);
 
                                         let text_color = if is_selected {
-                                            if is_dark { egui::Color32::WHITE } else { egui::Color32::BLACK }
+                                            if is_dark {
+                                                egui::Color32::WHITE
+                                            } else {
+                                                egui::Color32::BLACK
+                                            }
                                         } else {
-                                            if is_dark { egui::Color32::from_gray(180) } else { egui::Color32::from_gray(80) }
+                                            if is_dark {
+                                                egui::Color32::from_gray(180)
+                                            } else {
+                                                egui::Color32::from_gray(80)
+                                            }
                                         };
 
                                         ui.vertical(|ui| {
@@ -395,9 +443,13 @@ impl eframe::App for LauncherApp {
 
                                                 if is_selected {
                                                     ui.with_layout(
-                                                        egui::Layout::right_to_left(egui::Align::Center),
+                                                        egui::Layout::right_to_left(
+                                                            egui::Align::Center,
+                                                        ),
                                                         |ui| {
-                                                            let tag = if path_str.starts_with("MATH:") {
+                                                            let tag = if path_str
+                                                                .starts_with("MATH:")
+                                                            {
                                                                 "CALC"
                                                             } else if path_str.starts_with("UWP:") {
                                                                 "APP"
@@ -409,7 +461,15 @@ impl eframe::App for LauncherApp {
                                                             ui.label(
                                                                 egui::RichText::new(tag)
                                                                     .size(10.0)
-                                                                    .color(if is_dark { egui::Color32::from_gray(100) } else { egui::Color32::from_gray(120) }),
+                                                                    .color(if is_dark {
+                                                                        egui::Color32::from_gray(
+                                                                            100,
+                                                                        )
+                                                                    } else {
+                                                                        egui::Color32::from_gray(
+                                                                            120,
+                                                                        )
+                                                                    }),
                                                             );
                                                         },
                                                     );
@@ -417,12 +477,21 @@ impl eframe::App for LauncherApp {
                                             });
 
                                             let subtitle_color = if is_selected {
-                                                if is_dark { egui::Color32::from_gray(150) } else { egui::Color32::from_gray(100) }
+                                                if is_dark {
+                                                    egui::Color32::from_gray(150)
+                                                } else {
+                                                    egui::Color32::from_gray(100)
+                                                }
                                             } else {
-                                                if is_dark { egui::Color32::from_gray(100) } else { egui::Color32::from_gray(140) }
+                                                if is_dark {
+                                                    egui::Color32::from_gray(100)
+                                                } else {
+                                                    egui::Color32::from_gray(140)
+                                                }
                                             };
                                             let subtitle = if path_str.starts_with("MATH:") {
-                                                "Pressione Enter para copiar o resultado".to_string()
+                                                "Pressione Enter para copiar o resultado"
+                                                    .to_string()
                                             } else if path_str.starts_with("UWP:") {
                                                 "Aplicativo do Windows".to_string()
                                             } else {
@@ -444,13 +513,19 @@ impl eframe::App for LauncherApp {
                         });
                 } else if self.search_query.trim().starts_with("g ") {
                     ui.add_space(8.0);
-                    let g_fill = if is_dark { egui::Color32::from_rgba_premultiplied(30, 35, 50, 255) } else { egui::Color32::from_rgba_premultiplied(230, 235, 245, 255) };
+                    let g_fill = if is_dark {
+                        egui::Color32::from_rgba_premultiplied(30, 35, 50, 255)
+                    } else {
+                        egui::Color32::from_rgba_premultiplied(230, 235, 245, 255)
+                    };
                     egui::Frame::none()
                         .fill(g_fill)
                         .inner_margin(12.0)
                         .show(ui, |ui| {
                             ui.horizontal(|ui| {
-                                ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(16.0));
+                                ui.label(
+                                    egui::RichText::new(egui_phosphor::regular::GLOBE).size(16.0),
+                                );
                                 ui.add_space(8.0);
                                 ui.label(
                                     egui::RichText::new(format!(

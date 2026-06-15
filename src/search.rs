@@ -1,5 +1,8 @@
 use crate::indexer::AppEntry;
-use nucleo_matcher::{Matcher, Config, pattern::{Pattern, CaseMatching, Normalization}};
+use nucleo_matcher::{
+    pattern::{CaseMatching, Normalization, Pattern},
+    Config, Matcher,
+};
 
 pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
     if query.is_empty() {
@@ -12,10 +15,11 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
     // Index already filters out blacklisted apps during build_index,
     // so we can directly match on the index to save huge amounts of CPU.
     let matches = pattern.match_list(index, &mut matcher);
-    
+
     let query_lower = query.to_ascii_lowercase();
 
-    let mut results: Vec<(i64, &AppEntry)> = matches.into_iter()
+    let mut results: Vec<(i64, &AppEntry)> = matches
+        .into_iter()
         .map(|(app, score)| {
             let name_lower = app.name.to_ascii_lowercase();
 
@@ -36,5 +40,10 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
 
     results.sort_unstable_by(|a, b| b.0.cmp(&a.0));
 
-    results.into_iter().take(10).map(|(_, app)| app.clone()).collect()
+    results
+        .into_iter()
+        .take(10)
+        .map(|(_, app)| app.clone())
+        .collect()
 }
+
