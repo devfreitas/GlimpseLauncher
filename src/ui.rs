@@ -12,6 +12,18 @@ use windows::Win32::UI::Shell::ShellExecuteW;
 use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
 
 use crossbeam_channel::Receiver;
+use once_cell::sync::Lazy;
+
+static APP_ICON: Lazy<Arc<egui::IconData>> = Lazy::new(|| {
+    let icon_data = include_bytes!("../public/icone.ico");
+    let image = image::load_from_memory(icon_data).expect("Failed to load icon").into_rgba8();
+    let (width, height) = image.dimensions();
+    Arc::new(egui::IconData {
+        rgba: image.into_raw(),
+        width,
+        height,
+    })
+});
 
 pub struct LauncherApp {
     search_query: String,
@@ -48,7 +60,7 @@ impl LauncherApp {
             is_visible,
             show_settings,
             was_visible_last_frame: false,
-            current_height: 60.0,
+            current_height: 68.0,
             index_receiver: rx,
             is_indexing: true,
             launched_paths: std::collections::HashSet::new(),
@@ -131,7 +143,7 @@ impl LauncherApp {
         self.search_query.clear();
         self.selected_index = 0;
         self.filtered.clear();
-        self.current_height = 60.0;
+        self.current_height = 68.0;
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
             600.0,
             self.current_height,
@@ -171,7 +183,7 @@ impl eframe::App for LauncherApp {
         self.was_visible_last_frame = current_visibility;
 
         if just_opened {
-            self.current_height = 60.0;
+            self.current_height = 68.0;
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
                 600.0,
                 self.current_height,
@@ -196,35 +208,133 @@ impl eframe::App for LauncherApp {
             ctx.show_viewport_immediate(
                 egui::ViewportId::from_hash_of("settings_viewport"),
                 egui::ViewportBuilder::default()
-                    .with_title("Configurações - Glimpse Launcher")
-                    .with_inner_size([400.0, 300.0]),
+                    .with_title("Configurações - Glimpse")
+                    .with_icon(APP_ICON.clone())
+                    .with_inner_size([440.0, 360.0]),
                 |ctx, class| {
                     if class == egui::ViewportClass::Deferred {
                         return;
                     }
                     
                     let mut config_changed = false;
-                    egui::CentralPanel::default().show(ctx, |ui| {
-                        ui.heading("Configurações");
-                        ui.separator();
+                    let theme = self.config.theme.clone().unwrap_or_default();
+                    let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
+                    let is_dark = bg[0] < 100;
+                    
+                    let visuals = if is_dark {
+                        egui::Visuals::dark()
+                    } else {
+                        egui::Visuals::light()
+                    };
+                    let panel_fill = visuals.panel_fill;
+                    ctx.set_visuals(visuals);
+
+                    egui::CentralPanel::default()
+                        .frame(egui::Frame::none().fill(panel_fill))
+                        .show(ctx, |ui| {
+                        let title_color = if is_dark { egui::Color32::from_rgb(255, 255, 255) } else { egui::Color32::from_rgb(0, 0, 0) };
+                        let desc_color = if is_dark { egui::Color32::from_gray(160) } else { egui::Color32::from_gray(120) };
                         
-                        let mut calc_enabled = self.config.enable_calculator.unwrap_or(true);
-                        if ui.checkbox(&mut calc_enabled, "Habilitar Calculadora (Ex: 2 + 2)").changed() {
-                            self.config.enable_calculator = Some(calc_enabled);
-                            config_changed = true;
-                        }
-                        
-                        let mut web_enabled = self.config.enable_web_search.unwrap_or(true);
-                        if ui.checkbox(&mut web_enabled, "Habilitar Pesquisa na Web (g ... )").changed() {
-                            self.config.enable_web_search = Some(web_enabled);
-                            config_changed = true;
-                        }
-                        
-                        let mut cmd_enabled = self.config.enable_commands.unwrap_or(true);
-                        if ui.checkbox(&mut cmd_enabled, "Habilitar Comandos de Terminal (> ... )").changed() {
-                            self.config.enable_commands = Some(cmd_enabled);
-                            config_changed = true;
-                        }
+                        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
+                            ui.add_space(24.0);
+                            
+                            ui.horizontal(|ui| {
+                                ui.add_space(24.0);
+                                ui.heading(egui::RichText::new("Configurações").size(24.0).strong().color(title_color));
+                            });
+                            
+                            ui.add_space(24.0);
+                            
+                            ui.horizontal(|ui| {
+                                ui.add_space(24.0);
+                                ui.vertical(|ui| {
+                                    ui.set_width(ui.available_width() - 24.0);
+                                    
+                                    ui.label(egui::RichText::new("Funcionalidades").size(12.0).color(desc_color).strong());
+                                    ui.add_space(12.0);
+                                    
+                                    // Item 1
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new(egui_phosphor::regular::CALCULATOR).size(20.0).color(title_color));
+                                        ui.add_space(12.0);
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new("Calculadora Embutida").size(15.0).color(title_color));
+                                            ui.add_space(2.0);
+                                            ui.label(egui::RichText::new("Avalia expressões matemáticas (ex: 2+2) diretamente na busca.").size(13.0).color(desc_color));
+                                        });
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let mut calc_enabled = self.config.enable_calculator.unwrap_or(true);
+                                            if ui.checkbox(&mut calc_enabled, "").changed() {
+                                                self.config.enable_calculator = Some(calc_enabled);
+                                                config_changed = true;
+                                            }
+                                        });
+                                    });
+                                    
+                                    ui.add_space(16.0);
+                                    
+                                    // Item 2
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(20.0).color(title_color));
+                                        ui.add_space(12.0);
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new("Pesquisa Rápida na Web").size(15.0).color(title_color));
+                                            ui.add_space(2.0);
+                                            ui.label(egui::RichText::new("Busque no Google digitando 'g ' seguido do termo desejado.").size(13.0).color(desc_color));
+                                        });
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let mut web_enabled = self.config.enable_web_search.unwrap_or(true);
+                                            if ui.checkbox(&mut web_enabled, "").changed() {
+                                                self.config.enable_web_search = Some(web_enabled);
+                                                config_changed = true;
+                                            }
+                                        });
+                                    });
+                                    
+                                    ui.add_space(16.0);
+
+                                    // Item 3
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new(egui_phosphor::regular::TERMINAL).size(20.0).color(title_color));
+                                        ui.add_space(12.0);
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new("Comandos de Terminal").size(15.0).color(title_color));
+                                            ui.add_space(2.0);
+                                            ui.label(egui::RichText::new("Rode comandos de prompt digitando '> '.").size(13.0).color(desc_color));
+                                        });
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let mut cmd_enabled = self.config.enable_commands.unwrap_or(true);
+                                            if ui.checkbox(&mut cmd_enabled, "").changed() {
+                                                self.config.enable_commands = Some(cmd_enabled);
+                                                config_changed = true;
+                                            }
+                                        });
+                                    });
+                                    
+                                    ui.add_space(32.0);
+                                    ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
+                                    ui.add_space(12.0);
+                                    
+                                    let info_frame = egui::Frame::none()
+                                        .fill(if is_dark { egui::Color32::from_rgb(30, 30, 35) } else { egui::Color32::from_rgb(240, 240, 245) })
+                                        .rounding(8.0)
+                                        .inner_margin(egui::Margin::same(12.0));
+                                        
+                                    info_frame.show(ui, |ui| {
+                                        ui.horizontal(|ui| {
+                                            ui.label(egui::RichText::new(egui_phosphor::regular::INFO).size(20.0).color(title_color));
+                                            ui.add_space(8.0);
+                                            ui.add(egui::Label::new(
+                                                egui::RichText::new("O Modo Claro/Escuro e Inicialização Automática podem ser alterados clicando com o botão direito no ícone do Glimpse na bandeja do sistema.")
+                                                    .size(13.0)
+                                                    .color(desc_color)
+                                            ).wrap(true));
+                                        });
+                                    });
+                                });
+                            });
+                            ui.add_space(24.0);
+                        });
                     });
                     
                     if config_changed {
@@ -242,7 +352,7 @@ impl eframe::App for LauncherApp {
             return;
         }
 
-        let mut target_height = 60.0;
+        let mut target_height = 68.0;
         if !self.filtered.is_empty() {
             target_height += 10.0;
             let items_to_show = self.filtered.len().min(3) as f32; // Show up to 3 items initially

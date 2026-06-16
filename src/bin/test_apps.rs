@@ -1,10 +1,10 @@
 use windows::core::ComInterface;
-use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED, CoTaskMemFree};
-use windows::Win32::UI::Shell::{
-    SHGetKnownFolderItem, FOLDERID_AppsFolder, IShellItem, IEnumShellItems, BHID_EnumItems,
-    SIGDN_NORMALDISPLAY, IShellItem2,
-};
+use windows::Win32::System::Com::{CoInitializeEx, CoTaskMemFree, COINIT_MULTITHREADED};
 use windows::Win32::UI::Shell::PropertiesSystem::PROPERTYKEY;
+use windows::Win32::UI::Shell::{
+    BHID_EnumItems, FOLDERID_AppsFolder, IEnumShellItems, IShellItem, IShellItem2,
+    SHGetKnownFolderItem, SIGDN_NORMALDISPLAY,
+};
 
 const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
     fmtid: windows::core::GUID::from_u128(0x9F4C2855_9F79_4B39_A8D0_E1D42DE1D5F3),
@@ -14,7 +14,7 @@ const PKEY_APP_USER_MODEL_ID: PROPERTYKEY = PROPERTYKEY {
 fn main() {
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-        
+
         let apps_folder: IShellItem = match SHGetKnownFolderItem(
             &FOLDERID_AppsFolder,
             windows::Win32::UI::Shell::KF_FLAG_DEFAULT,
@@ -26,9 +26,9 @@ fn main() {
                 return;
             }
         };
-        
+
         let enum_items: IEnumShellItems = apps_folder.BindToHandler(None, &BHID_EnumItems).unwrap();
-        
+
         let mut fetched = 0;
         let mut items: [Option<IShellItem>; 1] = [None; 1];
         while enum_items.Next(&mut items, Some(&mut fetched)).is_ok() && fetched == 1 {
