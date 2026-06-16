@@ -25,13 +25,16 @@ O Glimpse Launcher oferece um conjunto robusto de ferramentas e otimizações pr
 - **Interface Moderna e Intuitiva:** 
   - Design premium inspirado no *Raycast* e *Wox*, com cantos arredondados, sombras dinâmicas e integração total com o Fluent Design do Windows 11.
   - Resultados detalhados com título, subtítulo (caminhos e dicas) e tags visuais (`EXE`, `APP`, `FILE`) para rápida identificação.
-- **Personalização de Temas:** Suporte completo a Modo Claro e Modo Escuro, com paletas de cores refinadas e transição instantânea de layout.
+- **Personalização e Configurações:** 
+  - Suporte completo a Modo Claro e Modo Escuro, com paletas de cores refinadas e transição instantânea de layout.
+  - Painel de configurações minimalista (acessível via `> config` ou pelo ícone da bandeja) para habilitar ou desabilitar módulos como Calculadora, Pesquisa Web e Terminal.
 - **Controle via Bandeja do Sistema (Tray):**
   - Alternância rápida entre temas.
   - Configuração nativa para inicialização automática com o Windows.
-  - Restauração imediata do launcher.
+  - Acesso fácil às configurações.
 - **Ferramentas Produtivas Integradas:**
   - **Calculadora Inline:** Resolva expressões matemáticas (ex: `25 * 4 / 2`) diretamente na barra de pesquisa.
+  - **Execução de Comandos:** Rode comandos rápidos do prompt de comando (CMD) utilizando `> seu comando`.
   - **Busca de Arquivos:** Localize instantaneamente seus documentos pessoais, imagens e downloads através de uma indexação inteligente de múltiplos níveis.
   - **Atalhos Web:** Faça pesquisas rápidas na internet utilizando atalhos pré-definidos (ex: `g sua pesquisa`).
 
@@ -40,6 +43,8 @@ O Glimpse Launcher oferece um conjunto robusto de ferramentas e otimizações pr
 O **Glimpse Launcher** funciona com atalhos simples para agilizar sua produtividade:
 
 - **Abrir o Launcher:** Pressione `Alt + S` ou clique no ícone da bandeja do sistema.
+- **Acessar Configurações:** Digite `> config` na barra de pesquisa ou clique com o botão direito no ícone da bandeja.
+- **Comandos de Terminal:** Digite `> ` seguido do seu comando (ex: `> ping google.com`) para executá-lo diretamente no prompt.
 - **Busca Rápida na Web:** Utilize prefixos. Digite `g sua pesquisa` para buscar no **Google**.
 - **Busca Local:** Digite o nome de um aplicativo ou arquivo local para encontrá-lo instantaneamente.
 - **Cálculos:** Digite uma equação (ex: `15 + 50 * 2`) para obter a resposta via calculadora embutida.
@@ -61,7 +66,7 @@ $ cd GlimpseLauncher
 $ cargo build --release
 
 # 4. Execute o binário gerado
-$ .\target\release\native_launcher.exe
+$ .\target\release\glimpse_launcher.exe
 ```
 - Crie uma branch: `git checkout -b feature/nova-melhoria`.
 - Commit suas mudanças: `git commit -m 'feat: Add nova funcionalidade'`.
