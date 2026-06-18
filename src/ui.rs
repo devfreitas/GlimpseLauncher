@@ -16,7 +16,9 @@ use once_cell::sync::Lazy;
 
 static APP_ICON: Lazy<Arc<egui::IconData>> = Lazy::new(|| {
     let icon_data = include_bytes!("../public/icone.ico");
-    let image = image::load_from_memory(icon_data).expect("Failed to load icon").into_rgba8();
+    let image = image::load_from_memory(icon_data)
+        .expect("Failed to load icon")
+        .into_rgba8();
     let (width, height) = image.dimensions();
     Arc::new(egui::IconData {
         rgba: image.into_raw(),
@@ -60,7 +62,7 @@ impl LauncherApp {
             is_visible,
             show_settings,
             was_visible_last_frame: false,
-            current_height: 68.0,
+            current_height: 62.0,
             index_receiver: rx,
             is_indexing: true,
             launched_paths: std::collections::HashSet::new(),
@@ -70,7 +72,10 @@ impl LauncherApp {
     fn execute_selected(&mut self, ctx: &egui::Context) {
         let query = self.search_query.trim();
 
-        if query.starts_with("g ") && query.len() > 2 && self.config.enable_web_search.unwrap_or(true) {
+        if query.starts_with("g ")
+            && query.len() > 2
+            && self.config.enable_web_search.unwrap_or(true)
+        {
             let search_term = &query[2..];
             let encoded_term = urlencoding::encode(search_term);
             let url = format!("https://www.google.com/search?q={}", encoded_term);
@@ -79,7 +84,8 @@ impl LauncherApp {
             return;
         }
 
-        if query.starts_with("> ") && query.len() > 2 && self.config.enable_commands.unwrap_or(true) {
+        if query.starts_with("> ") && query.len() > 2 && self.config.enable_commands.unwrap_or(true)
+        {
             let cmd = &query[2..];
             if cmd.trim() == "config" || cmd.trim() == "settings" {
                 self.show_settings.store(true, Ordering::SeqCst);
@@ -143,7 +149,7 @@ impl LauncherApp {
         self.search_query.clear();
         self.selected_index = 0;
         self.filtered.clear();
-        self.current_height = 68.0;
+        self.current_height = 62.0;
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
             600.0,
             self.current_height,
@@ -183,7 +189,7 @@ impl eframe::App for LauncherApp {
         self.was_visible_last_frame = current_visibility;
 
         if just_opened {
-            self.current_height = 68.0;
+            self.current_height = 62.0;
             ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
                 600.0,
                 self.current_height,
@@ -215,12 +221,12 @@ impl eframe::App for LauncherApp {
                     if class == egui::ViewportClass::Deferred {
                         return;
                     }
-                    
+
                     let mut config_changed = false;
                     let theme = self.config.theme.clone().unwrap_or_default();
                     let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
                     let is_dark = bg[0] < 100;
-                    
+
                     let visuals = if is_dark {
                         egui::Visuals::dark()
                     } else {
@@ -234,25 +240,25 @@ impl eframe::App for LauncherApp {
                         .show(ctx, |ui| {
                         let title_color = if is_dark { egui::Color32::from_rgb(255, 255, 255) } else { egui::Color32::from_rgb(0, 0, 0) };
                         let desc_color = if is_dark { egui::Color32::from_gray(160) } else { egui::Color32::from_gray(120) };
-                        
+
                         egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                             ui.add_space(24.0);
-                            
+
                             ui.horizontal(|ui| {
                                 ui.add_space(24.0);
                                 ui.heading(egui::RichText::new("Configurações").size(24.0).strong().color(title_color));
                             });
-                            
+
                             ui.add_space(24.0);
-                            
+
                             ui.horizontal(|ui| {
                                 ui.add_space(24.0);
                                 ui.vertical(|ui| {
                                     ui.set_width(ui.available_width() - 24.0);
-                                    
+
                                     ui.label(egui::RichText::new("Funcionalidades").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
-                                    
+
                                     // Item 1
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new(egui_phosphor::regular::CALCULATOR).size(20.0).color(title_color));
@@ -270,9 +276,9 @@ impl eframe::App for LauncherApp {
                                             }
                                         });
                                     });
-                                    
+
                                     ui.add_space(16.0);
-                                    
+
                                     // Item 2
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(20.0).color(title_color));
@@ -290,7 +296,7 @@ impl eframe::App for LauncherApp {
                                             }
                                         });
                                     });
-                                    
+
                                     ui.add_space(16.0);
 
                                     // Item 3
@@ -310,16 +316,16 @@ impl eframe::App for LauncherApp {
                                             }
                                         });
                                     });
-                                    
+
                                     ui.add_space(32.0);
                                     ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
-                                    
+
                                     let info_frame = egui::Frame::none()
                                         .fill(if is_dark { egui::Color32::from_rgb(30, 30, 35) } else { egui::Color32::from_rgb(240, 240, 245) })
                                         .rounding(8.0)
                                         .inner_margin(egui::Margin::same(12.0));
-                                        
+
                                     info_frame.show(ui, |ui| {
                                         ui.horizontal(|ui| {
                                             ui.label(egui::RichText::new(egui_phosphor::regular::INFO).size(20.0).color(title_color));
@@ -336,11 +342,11 @@ impl eframe::App for LauncherApp {
                             ui.add_space(24.0);
                         });
                     });
-                    
+
                     if config_changed {
                         let _ = crate::config::save(&self.config);
                     }
-                    
+
                     if ctx.input(|i| i.viewport().close_requested()) {
                         self.show_settings.store(false, Ordering::SeqCst);
                     }
@@ -352,7 +358,7 @@ impl eframe::App for LauncherApp {
             return;
         }
 
-        let mut target_height = 68.0;
+        let mut target_height = 62.0;
         if !self.filtered.is_empty() {
             target_height += 10.0;
             let items_to_show = self.filtered.len().min(3) as f32; // Show up to 3 items initially
@@ -473,7 +479,9 @@ impl eframe::App for LauncherApp {
 
                                     if self.config.enable_calculator.unwrap_or(true) {
                                         if let Ok(result) = evalexpr::eval(query) {
-                                            if let evalexpr::Value::Int(_) | evalexpr::Value::Float(_) = result {
+                                            if let evalexpr::Value::Int(_)
+                                            | evalexpr::Value::Float(_) = result
+                                            {
                                                 self.filtered.insert(
                                                     0,
                                                     crate::indexer::AppEntry {
