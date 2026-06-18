@@ -351,12 +351,12 @@ impl eframe::App for LauncherApp {
                                             config_changed = true;
                                         }
                                         if ui.button("Inferior direito").clicked() {
-                                            self.config.position_x = Some(1.0);
+                                            self.config.position_x = Some(0.98);
                                             self.config.position_y = Some(0.65);
                                             config_changed = true;
                                         }
                                         if ui.button("Inferior esquerdo").clicked() {
-                                            self.config.position_x = Some(0.0);
+                                            self.config.position_x = Some(0.02);
                                             self.config.position_y = Some(0.65);
                                             config_changed = true;
                                         }
