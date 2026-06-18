@@ -220,7 +220,7 @@ impl eframe::App for LauncherApp {
                 egui::ViewportBuilder::default()
                     .with_title("Configurações - Glimpse")
                     .with_icon(APP_ICON.clone())
-                    .with_inner_size([440.0, 360.0]),
+                    .with_inner_size([800.0, 600.0]),
                 |ctx, class| {
                     if class == egui::ViewportClass::Deferred {
                         return;
@@ -325,7 +325,7 @@ impl eframe::App for LauncherApp {
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new("Posição da Janela").size(12.0).color(desc_color).strong());
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            if ui.button("Mover com o Mouse").clicked() {
+                                            if ui.button("Mover").clicked() {
                                                 self.is_dragging_mode = true;
                                                 self.show_settings.store(false, Ordering::SeqCst);
                                                 self.is_visible.store(true, Ordering::SeqCst);
@@ -333,25 +333,35 @@ impl eframe::App for LauncherApp {
                                         });
                                     });
                                     ui.add_space(12.0);
-                                    
                                     ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new("Horizontal (X):").color(title_color));
-                                        let mut pos_x = self.config.position_x.unwrap_or(0.5) * 100.0;
-                                        if ui.add(egui::Slider::new(&mut pos_x, 0.0..=100.0).text("%")).changed() {
-                                            self.config.position_x = Some(pos_x / 100.0);
+                                        ui.label(egui::RichText::new("Posição pré-definida:").color(title_color));
+                                        if ui.button("Centro").clicked() {
+                                            self.config.position_x = Some(0.5);
+                                            self.config.position_y = Some(0.25);
+                                            config_changed = true;
+                                        }
+                                        if ui.button("Superior direito").clicked() {
+                                            self.config.position_x = Some(0.9);
+                                            self.config.position_y = Some(0.1);
+                                            config_changed = true;
+                                        }
+                                        if ui.button("Superior esquerdo").clicked() {
+                                            self.config.position_x = Some(0.1);
+                                            self.config.position_y = Some(0.1);
+                                            config_changed = true;
+                                        }
+                                        if ui.button("Inferior direito").clicked() {
+                                            self.config.position_x = Some(1.0);
+                                            self.config.position_y = Some(0.65);
+                                            config_changed = true;
+                                        }
+                                        if ui.button("Inferior esquerdo").clicked() {
+                                            self.config.position_x = Some(0.0);
+                                            self.config.position_y = Some(0.65);
                                             config_changed = true;
                                         }
                                     });
-                                    ui.add_space(8.0);
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new("Vertical (Y):").color(title_color));
-                                        let mut pos_y = self.config.position_y.unwrap_or(0.25) * 100.0;
-                                        if ui.add(egui::Slider::new(&mut pos_y, 0.0..=100.0).text("%")).changed() {
-                                            self.config.position_y = Some(pos_y / 100.0);
-                                            config_changed = true;
-                                        }
-                                    });
-
+                        
                                     ui.add_space(32.0);
                                     ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
@@ -372,21 +382,19 @@ impl eframe::App for LauncherApp {
                                             ).wrap(true));
                                         });
                                     });
-                                });
-                            });
-                            ui.add_space(24.0);
-                        });
-                    });
+                                }); // Close ui.vertical
+                            }); // Close ui.horizontal
+                        }); // Close ScrollArea
+                    }); // Close CentralPanel
 
                     if config_changed {
                         let _ = crate::config::save(&self.config);
                     }
-
                     if ctx.input(|i| i.viewport().close_requested()) {
                         self.show_settings.store(false, Ordering::SeqCst);
                     }
                 }
-            );
+            ); // End show_viewport_immediate call
         }
 
         if !current_visibility {
