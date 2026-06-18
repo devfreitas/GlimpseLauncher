@@ -14,6 +14,8 @@ pub struct Config {
     pub enable_calculator: Option<bool>,
     pub enable_web_search: Option<bool>,
     pub enable_commands: Option<bool>,
+    pub position_x: Option<f32>,
+    pub position_y: Option<f32>,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
@@ -44,6 +46,8 @@ impl Default for Config {
             enable_calculator: Some(true),
             enable_web_search: Some(true),
             enable_commands: Some(true),
+            position_x: Some(0.5),
+            position_y: Some(0.25),
         }
     }
 }

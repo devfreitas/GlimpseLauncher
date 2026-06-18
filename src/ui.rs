@@ -40,6 +40,7 @@ pub struct LauncherApp {
     current_height: f32,
     index_receiver: Receiver<Vec<AppEntry>>,
     is_indexing: bool,
+    is_dragging_mode: bool,
 }
 
 impl LauncherApp {
@@ -65,6 +66,7 @@ impl LauncherApp {
             current_height: 62.0,
             index_receiver: rx,
             is_indexing: true,
+            is_dragging_mode: false,
             launched_paths: std::collections::HashSet::new(),
         }
     }
@@ -178,7 +180,7 @@ impl eframe::App for LauncherApp {
 
         let current_visibility = self.is_visible.load(Ordering::SeqCst);
         let has_focus = ctx.input(|i| i.focused);
-        if current_visibility && self.was_visible_last_frame && !has_focus {
+        if current_visibility && self.was_visible_last_frame && !has_focus && !self.is_dragging_mode {
             self.hide(ctx);
             return;
         }
@@ -196,7 +198,9 @@ impl eframe::App for LauncherApp {
             )));
 
             let center_pos = if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
-                egui::pos2((monitor_size.x - 600.0) / 2.0, monitor_size.y * 0.25)
+                let x_pct = self.config.position_x.unwrap_or(0.5);
+                let y_pct = self.config.position_y.unwrap_or(0.25);
+                egui::pos2((monitor_size.x - 600.0) * x_pct, monitor_size.y * y_pct)
             } else {
                 egui::pos2(100.0, 100.0)
             };
@@ -318,6 +322,36 @@ impl eframe::App for LauncherApp {
                                     });
 
                                     ui.add_space(32.0);
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new("Posição da Janela").size(12.0).color(desc_color).strong());
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            if ui.button("Mover com o Mouse").clicked() {
+                                                self.is_dragging_mode = true;
+                                                self.show_settings.store(false, Ordering::SeqCst);
+                                            }
+                                        });
+                                    });
+                                    ui.add_space(12.0);
+                                    
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new("Horizontal (X):").color(title_color));
+                                        let mut pos_x = self.config.position_x.unwrap_or(0.5) * 100.0;
+                                        if ui.add(egui::Slider::new(&mut pos_x, 0.0..=100.0).text("%")).changed() {
+                                            self.config.position_x = Some(pos_x / 100.0);
+                                            config_changed = true;
+                                        }
+                                    });
+                                    ui.add_space(8.0);
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new("Vertical (Y):").color(title_color));
+                                        let mut pos_y = self.config.position_y.unwrap_or(0.25) * 100.0;
+                                        if ui.add(egui::Slider::new(&mut pos_y, 0.0..=100.0).text("%")).changed() {
+                                            self.config.position_y = Some(pos_y / 100.0);
+                                            config_changed = true;
+                                        }
+                                    });
+
+                                    ui.add_space(32.0);
                                     ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
 
@@ -359,6 +393,9 @@ impl eframe::App for LauncherApp {
         }
 
         let mut target_height = 62.0;
+        if self.is_dragging_mode {
+            target_height += 48.0;
+        }
         if !self.filtered.is_empty() {
             target_height += 10.0;
             let items_to_show = self.filtered.len().min(3) as f32; // Show up to 3 items initially
@@ -430,6 +467,46 @@ impl eframe::App for LauncherApp {
             .frame(frame_style)
             .show(ctx, |ui| {
                 ui.style_mut().visuals.extreme_bg_color = egui::Color32::TRANSPARENT;
+
+                if self.is_dragging_mode {
+                    ui.add_space(4.0);
+                    let drag_rect = ui.allocate_space(egui::vec2(ui.available_width(), 36.0)).1;
+                    let response = ui.interact(drag_rect, ui.id().with("drag_mode"), egui::Sense::drag());
+                    
+                    ui.painter().rect_filled(
+                        drag_rect,
+                        8.0,
+                        if is_dark { egui::Color32::from_rgba_premultiplied(100, 100, 150, 50) } else { egui::Color32::from_rgba_premultiplied(150, 150, 200, 50) }
+                    );
+                    let text = "↕ Arraste aqui para mover. Clique para salvar.";
+                    ui.painter().text(
+                        drag_rect.center(),
+                        egui::Align2::CENTER_CENTER,
+                        text,
+                        egui::FontId::proportional(14.0),
+                        if is_dark { egui::Color32::WHITE } else { egui::Color32::BLACK }
+                    );
+                    
+                    if response.drag_started() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
+                    }
+                    if response.clicked() {
+                        self.is_dragging_mode = false;
+                        if let Some(outer_rect) = ctx.input(|i| i.viewport().outer_rect) {
+                            if let Some(monitor_size) = ctx.input(|i| i.viewport().monitor_size) {
+                                let w = monitor_size.x - 600.0;
+                                let h = monitor_size.y;
+                                let x_pct = if w > 0.0 { outer_rect.min.x / w } else { 0.5 };
+                                let y_pct = if h > 0.0 { outer_rect.min.y / h } else { 0.25 };
+                                self.config.position_x = Some(x_pct.clamp(0.0, 1.0));
+                                self.config.position_y = Some(y_pct.clamp(0.0, 1.0));
+                                let _ = crate::config::save(&self.config);
+                            }
+                        }
+                    }
+                    
+                    ui.add_space(8.0);
+                }
 
                 let input_fill = if is_dark {
                     egui::Color32::from_rgba_premultiplied(35, 35, 40, 255)
