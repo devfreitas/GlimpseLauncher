@@ -1,6 +1,6 @@
-use crate::config::load;
-use crate::indexer::AppEntry;
-use crate::search::search_apps;
+use crate::core::config::load;
+use crate::core::indexer::AppEntry;
+use crate::core::search::search_apps;
 use eframe::egui;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -15,7 +15,7 @@ use crossbeam_channel::Receiver;
 use once_cell::sync::Lazy;
 
 static APP_ICON: Lazy<Arc<egui::IconData>> = Lazy::new(|| {
-    let icon_data = include_bytes!("../public/icone.ico");
+    let icon_data = include_bytes!("../../public/icone.ico");
     let image = image::load_from_memory(icon_data)
         .expect("Failed to load icon")
         .into_rgba8();
@@ -34,7 +34,7 @@ pub struct LauncherApp {
     selected_index: usize,
     is_visible: Arc<AtomicBool>,
     show_settings: Arc<AtomicBool>,
-    config: crate::config::Config,
+    config: crate::core::config::Config,
     launched_paths: std::collections::HashSet<String>,
     was_visible_last_frame: bool,
     current_height: f32,
@@ -49,9 +49,9 @@ impl LauncherApp {
 
         let tx_clone = tx.clone();
         std::thread::spawn(move || {
-            let index = crate::indexer::build_index(false);
+            let index = crate::core::indexer::build_index(false);
             let _ = tx_clone.send(index);
-            crate::indexer::start_watcher(tx_clone);
+            crate::core::indexer::start_watcher(tx_clone);
         });
 
         Self {
@@ -186,7 +186,7 @@ impl eframe::App for LauncherApp {
         }
         let just_opened = current_visibility && !self.was_visible_last_frame;
         if just_opened {
-            self.config = crate::config::load();
+            self.config = crate::core::config::load();
         }
         self.was_visible_last_frame = current_visibility;
 
@@ -388,7 +388,7 @@ impl eframe::App for LauncherApp {
                     }); // Close CentralPanel
 
                     if config_changed {
-                        let _ = crate::config::save(&self.config);
+                        let _ = crate::core::config::save(&self.config);
                     }
                     if ctx.input(|i| i.viewport().close_requested()) {
                         self.show_settings.store(false, Ordering::SeqCst);
@@ -512,7 +512,7 @@ impl eframe::App for LauncherApp {
                                             let y_pct = if h > 0.0 { outer_rect.min.y / h } else { 0.25 };
                                             self.config.position_x = Some(x_pct.clamp(0.0, 1.0));
                                             self.config.position_y = Some(y_pct.clamp(0.0, 1.0));
-                                            let _ = crate::config::save(&self.config);
+                                            let _ = crate::core::config::save(&self.config);
                                         }
                                     }
                                 }
@@ -575,8 +575,8 @@ impl eframe::App for LauncherApp {
                                             {
                                                 self.filtered.insert(
                                                     0,
-                                                    crate::indexer::AppEntry {
-                                                        name: result.to_string(),
+                                                    crate::core::indexer::AppEntry {
+                                                        name: result.to_string().into_boxed_str(),
                                                         path: std::path::PathBuf::from(format!(
                                                             "MATH:{}",
                                                             result
@@ -701,7 +701,7 @@ impl eframe::App for LauncherApp {
                                         ui.vertical(|ui| {
                                             ui.horizontal(|ui| {
                                                 ui.label(
-                                                    egui::RichText::new(&app.name)
+                                                    egui::RichText::new(&*app.name)
                                                         .color(text_color)
                                                         .size(16.0),
                                                 );

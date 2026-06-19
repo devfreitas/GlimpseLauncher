@@ -3,10 +3,9 @@
 #[global_allocator]
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
-mod config;
-mod hotkey;
-mod indexer;
-mod search;
+mod constants;
+mod core;
+mod os;
 mod ui;
 
 use crossbeam_channel::unbounded;
@@ -99,49 +98,54 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_
         let menu_channel = MenuEvent::receiver();
         let tray_channel = TrayIconEvent::receiver();
         loop {
-            if let Ok(event) = menu_channel.try_recv() {
-                if event.id == "quit_app" {
-                    std::process::exit(0);
-                } else if event.id == "settings_menu" {
-                    let _ = tx_focus.send(AppMsg::ShowSettings);
-                } else if event.id == "autostart_toggle" {
-                    let is_checked = is_autostart_enabled();
-                    toggle_autostart(!is_checked);
-                } else if event.id == "theme_toggle" {
-                    let mut config = crate::config::load();
-                    let is_dark = config
-                        .theme
-                        .as_ref()
-                        .and_then(|t| t.background_rgba)
-                        .map_or(true, |rgba| rgba[0] < 100);
-                    let new_theme = if is_dark {
-                        // Light mode
-                        crate::config::ThemeConfig {
-                            background_rgba: Some([240, 240, 245, 230]),
-                            blur_radius: None,
+            crossbeam_channel::select! {
+                recv(menu_channel) -> event_res => {
+                    if let Ok(event) = event_res {
+                        if event.id == "quit_app" {
+                            std::process::exit(0);
+                        } else if event.id == "settings_menu" {
+                            let _ = tx_focus.send(AppMsg::ShowSettings);
+                        } else if event.id == "autostart_toggle" {
+                            let is_checked = is_autostart_enabled();
+                            toggle_autostart(!is_checked);
+                        } else if event.id == "theme_toggle" {
+                            let mut config = crate::core::config::load();
+                            let is_dark = config
+                                .theme
+                                .as_ref()
+                                .and_then(|t| t.background_rgba)
+                                .map_or(true, |rgba| rgba[0] < 100);
+                            let new_theme = if is_dark {
+                                // Light mode
+                                crate::core::config::ThemeConfig {
+                                    background_rgba: Some([240, 240, 245, 230]),
+                                    blur_radius: None,
+                                }
+                            } else {
+                                // Dark mode
+                                crate::core::config::ThemeConfig {
+                                    background_rgba: Some([20, 20, 22, 200]),
+                                    blur_radius: None,
+                                }
+                            };
+                            config.theme = Some(new_theme);
+                            let _ = crate::core::config::save(&config);
+                            let _ = tx_focus.send(AppMsg::ShowLauncher); // Focus to show the updated theme
                         }
-                    } else {
-                        // Dark mode
-                        crate::config::ThemeConfig {
-                            background_rgba: Some([20, 20, 22, 200]),
-                            blur_radius: None,
+                    }
+                }
+                recv(tray_channel) -> event_res => {
+                    if let Ok(event) = event_res {
+                        if let tray_icon::TrayIconEvent::Click {
+                            button: tray_icon::MouseButton::Left,
+                            ..
+                        } = event
+                        {
+                            let _ = tx_focus.send(AppMsg::ShowLauncher);
                         }
-                    };
-                    config.theme = Some(new_theme);
-                    let _ = crate::config::save(&config);
-                    let _ = tx_focus.send(AppMsg::ShowLauncher); // Focus to show the updated theme
+                    }
                 }
             }
-            if let Ok(event) = tray_channel.try_recv() {
-                if let tray_icon::TrayIconEvent::Click {
-                    button: tray_icon::MouseButton::Left,
-                    ..
-                } = event
-                {
-                    let _ = tx_focus.send(AppMsg::ShowLauncher);
-                }
-            }
-            std::thread::sleep(std::time::Duration::from_millis(50));
         }
     });
 
@@ -173,7 +177,7 @@ fn main() -> Result<(), eframe::Error> {
 
     let tx_hotkey = tx.clone();
     thread::spawn(move || {
-        hotkey::listen_for_hotkey(tx_hotkey);
+        crate::os::hotkey::listen_for_hotkey(tx_hotkey);
     });
 
     let tx_ipc = tx.clone();
@@ -227,10 +231,10 @@ fn main() -> Result<(), eframe::Error> {
                 while let Ok(msg) = rx.recv() {
                     match msg {
                         AppMsg::ShowLauncher => {
-                            thread_visibility.store(true, Ordering::SeqCst);
+                            thread_visibility.store(true, Ordering::Relaxed);
                         }
                         AppMsg::ShowSettings => {
-                            thread_settings.store(true, Ordering::SeqCst);
+                            thread_settings.store(true, Ordering::Relaxed);
                         }
                     }
                     ctx.request_repaint();

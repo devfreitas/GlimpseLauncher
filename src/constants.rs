@@ -1,0 +1,27 @@
+pub const BLACKLIST: &[&str] = &[
+    "unins", "uninstall", "desinstalar", "setup", "installer", "install", "msiexec", "vcredist",
+    "dotnet-runtime", "bootstrapper", "clicktorun", "dxwebsetup", "update", "updater", "autoupdate",
+    "patcher", "maint", "fix", "helper", "broker", "host", "agent", "service", "background", "proxy",
+    "watchdog", "daemon", "bridge", "overlay", "telemetry", "monitor", "commandline", "headless",
+    "launcher_helper", "driver", "vulkan", "physx", "notification_helper", "crash_handler", "crash",
+    "diagnostics", "troubleshoot", "error", "crashreporter", "crashhandler", "dump", "report", "log",
+    "feedback", "msinfo", "systemsettings", "toastnotification", "microsoft.windows.",
+    "softwarelogo", "adminflows", "sysinfo", "coretools", "runtimebroker", "sihost", "ctfmon",
+    "dllhost", "rundll", "conhost", "csrss", "svchost", "wininit", "winlogon", "lsass", "smss",
+    "fontview", "atbroker", "systemreset", "isoburn", "magnify", "narrator", "osk", "sysprep",
+    "wsreset", "taskhost", "notification_helper", "nacl", "swiftshader", "widevine", "clearkey",
+    "srl", "squirrel", "nuget", "chocolatey", "elevation_service", "readme", "license", "changelog",
+    "credits", "copyright", "legal", "manifest", "metadata", "config", "settings",
+];
+
+pub const DIR_BLACKLIST: &[&str] = &[
+    "node_modules", "target", ".git", ".svn", "dist", "build", "temp", "tmp", "cache", "logs",
+    "appdata\\local\\temp", "windows\\winsxs", "windows\\servicing",
+    "windows\\softwaredistribution", "common files", "microsoft shared", "steamapps\\common",
+    ".vs", ".idea", ".vscode", "vendor", "obj", "bin", "packages", "package cache",
+    "microsoft\\windowsapps", "appdata\\local\\packages",
+];
+
+pub const DOCS_TERMS: &[&str] = &[
+    "documentation", "help", "readme", "manual", "license", "changelog", "credits", "legal", "faq",
+];

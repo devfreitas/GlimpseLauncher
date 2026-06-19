@@ -33,30 +33,32 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
             apps_folder.BindToHandler(None, &BHID_EnumItems);
         if let Ok(enum_items) = enum_items_result {
             let mut fetched = 0;
-            let mut items: [Option<IShellItem>; 1] = [None; 1];
-            while enum_items.Next(&mut items, Some(&mut fetched)).is_ok() && fetched == 1 {
-                if let Some(item) = &items[0] {
-                    if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
-                        let name = name_pwstr.to_string().unwrap_or_default();
-                        if let Ok(item2) = item.cast::<IShellItem2>() {
-                            if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
-                                let aumid = aumid_pwstr.to_string().unwrap_or_default();
-
-                                if !name.is_empty()
-                                    && !is_blacklisted(&name)
-                                    && !aumid.contains("Internal")
-                                {
-                                    index.push(AppEntry {
-                                        name: name.clone(),
-                                        path: PathBuf::from(format!("UWP:{}", aumid)),
-                                        priority: 100,
-                                        is_dir: false,
-                                    });
+            let mut items: [Option<IShellItem>; 64] = std::array::from_fn(|_| None);
+            while enum_items.Next(&mut items, Some(&mut fetched)).is_ok() && fetched > 0 {
+                for i in 0..fetched as usize {
+                    if let Some(item) = &items[i] {
+                        if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
+                            let name = name_pwstr.to_string().unwrap_or_default();
+                            if let Ok(item2) = item.cast::<IShellItem2>() {
+                                if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
+                                    let aumid = aumid_pwstr.to_string().unwrap_or_default();
+    
+                                    if !name.is_empty()
+                                        && !is_blacklisted(&name)
+                                        && !aumid.contains("Internal")
+                                    {
+                                        index.push(AppEntry {
+                                            name: name.into_boxed_str(),
+                                            path: PathBuf::from(format!("UWP:{}", aumid)),
+                                            priority: 100,
+                                            is_dir: false,
+                                        });
+                                    }
+                                    CoTaskMemFree(Some(aumid_pwstr.0 as _));
                                 }
-                                CoTaskMemFree(Some(aumid_pwstr.0 as _));
                             }
+                            CoTaskMemFree(Some(name_pwstr.0 as _));
                         }
-                        CoTaskMemFree(Some(name_pwstr.0 as _));
                     }
                 }
             }
@@ -94,7 +96,7 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
                             })
                             .unwrap_or_else(|| PathBuf::new());
                         index.push(AppEntry {
-                            name: name.clone(),
+                            name: name.into_boxed_str(),
                             path: exe_path,
                             priority: 80,
                             is_dir: false,
@@ -112,7 +114,7 @@ use walkdir::WalkDir;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Encode, Decode)]
 pub struct AppEntry {
-    pub name: String,
+    pub name: Box<str>,
     pub path: PathBuf,
     pub priority: u8,
     pub is_dir: bool,
@@ -124,165 +126,33 @@ impl AsRef<str> for AppEntry {
     }
 }
 
-pub const BLACKLIST: &[&str] = &[
-    "unins",
-    "uninstall",
-    "desinstalar",
-    "setup",
-    "installer",
-    "install",
-    "msiexec",
-    "vcredist",
-    "dotnet-runtime",
-    "bootstrapper",
-    "clicktorun",
-    "dxwebsetup",
-    "update",
-    "updater",
-    "autoupdate",
-    "patcher",
-    "maint",
-    "fix",
-    "helper",
-    "broker",
-    "host",
-    "agent",
-    "service",
-    "background",
-    "proxy",
-    "watchdog",
-    "daemon",
-    "bridge",
-    "overlay",
-    "telemetry",
-    "monitor",
-    "commandline",
-    "headless",
-    "launcher_helper",
-    "driver",
-    "vulkan",
-    "physx",
-    "notification_helper",
-    "crash_handler",
-    "crash",
-    "diagnostics",
-    "troubleshoot",
-    "error",
-    "crashreporter",
-    "crashhandler",
-    "dump",
-    "report",
-    "log",
-    "feedback",
-    "msinfo",
-    "systemsettings",
-    "toastnotification",
-    "microsoft.windows.",
-    "softwarelogo",
-    "adminflows",
-    "sysinfo",
-    "coretools",
-    "runtimebroker",
-    "sihost",
-    "ctfmon",
-    "dllhost",
-    "rundll",
-    "conhost",
-    "csrss",
-    "svchost",
-    "wininit",
-    "winlogon",
-    "lsass",
-    "smss",
-    "fontview",
-    "atbroker",
-    "systemreset",
-    "isoburn",
-    "magnify",
-    "narrator",
-    "osk",
-    "sysprep",
-    "wsreset",
-    "taskhost",
-    "notification_helper",
-    "nacl",
-    "swiftshader",
-    "widevine",
-    "clearkey",
-    "srl",
-    "squirrel",
-    "nuget",
-    "chocolatey",
-    "elevation_service",
-    "readme",
-    "license",
-    "changelog",
-    "credits",
-    "copyright",
-    "legal",
-    "manifest",
-    "metadata",
-    "config",
-    "settings",
-];
+fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
+    if needle.is_empty() { return true; }
+    if haystack.len() < needle.len() { return false; }
+    haystack.as_bytes().windows(needle.len()).any(|w| w.eq_ignore_ascii_case(needle.as_bytes()))
+}
 
-const DIR_BLACKLIST: &[&str] = &[
-    "node_modules",
-    "target",
-    ".git",
-    ".svn",
-    "dist",
-    "build",
-    "temp",
-    "tmp",
-    "cache",
-    "logs",
-    "appdata\\local\\temp",
-    "windows\\winsxs",
-    "windows\\servicing",
-    "windows\\softwaredistribution",
-    "common files",
-    "microsoft shared",
-    "steamapps\\common",
-    ".vs",
-    ".idea",
-    ".vscode",
-    "vendor",
-    "obj",
-    "bin",
-    "packages",
-    "package cache",
-    "microsoft\\windowsapps",
-    "appdata\\local\\packages",
-];
-
-const DOCS_TERMS: &[&str] = &[
-    "documentation",
-    "help",
-    "readme",
-    "manual",
-    "license",
-    "changelog",
-    "credits",
-    "legal",
-    "faq",
-];
+fn rfind_ignore_ascii_case(haystack: &str, needle: &str) -> Option<usize> {
+    if needle.is_empty() { return Some(haystack.len()); }
+    if haystack.len() < needle.len() { return None; }
+    haystack.as_bytes().windows(needle.len()).enumerate().rev()
+        .find_map(|(i, w)| if w.eq_ignore_ascii_case(needle.as_bytes()) { Some(i) } else { None })
+}
 
 fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
     if is_uwp {
         return 100;
     }
 
-    let p = path.to_string_lossy().to_ascii_lowercase();
+    let p = path.to_string_lossy();
     let name = path
         .file_stem()
         .unwrap_or_default()
-        .to_string_lossy()
-        .to_ascii_lowercase();
+        .to_string_lossy();
 
-    if DOCS_TERMS
+    if crate::constants::DOCS_TERMS
         .iter()
-        .any(|term| name.contains(term) || p.contains(term))
+        .any(|term| contains_ignore_ascii_case(&name, term) || contains_ignore_ascii_case(&p, term))
     {
         return 1;
     }
@@ -301,17 +171,14 @@ fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
 }
 
 fn is_blacklisted(name: &str) -> bool {
-    let name_lower = name.to_ascii_lowercase();
-    BLACKLIST.iter().any(|term| name_lower.contains(term))
+    crate::constants::BLACKLIST.iter().any(|term| contains_ignore_ascii_case(name, term))
 }
 
 fn is_dir_blacklisted(dir_name: &str) -> bool {
-    let d = dir_name.to_ascii_lowercase();
-    DIR_BLACKLIST.iter().any(|term| d.contains(term))
+    crate::constants::DIR_BLACKLIST.iter().any(|term| contains_ignore_ascii_case(dir_name, term))
 }
 
 fn base_name(name: &str) -> String {
-    let n = name.to_ascii_lowercase();
     let suffixes = [
         " setup",
         " installer",
@@ -328,9 +195,9 @@ fn base_name(name: &str) -> String {
         " troubleshooter",
         " compatibility",
     ];
-    let mut result = n.clone();
+    let mut result = name.to_string();
     for suffix in &suffixes {
-        if let Some(pos) = result.rfind(suffix) {
+        if let Some(pos) = rfind_ignore_ascii_case(&result, suffix) {
             result.truncate(pos);
         }
     }
@@ -369,7 +236,7 @@ pub fn build_index(force_rebuild: bool) -> Vec<AppEntry> {
         if path.exists() {
             let name = tool.replace(".exe", "");
             index.push(AppEntry {
-                name,
+                name: name.into_boxed_str(),
                 path,
                 priority: 9,
                 is_dir: false,
@@ -476,7 +343,7 @@ fn scan_directory(
                 if allowed_extensions.contains(&ext.to_lowercase().as_str()) {
                     let priority = calculate_priority(path, false);
                     index.push(AppEntry {
-                        name: name.clone(),
+                        name: name.clone().into_boxed_str(),
                         path: path.to_path_buf(),
                         priority,
                         is_dir: false,
@@ -487,7 +354,7 @@ fn scan_directory(
             if !name.starts_with('.') && !is_dir_blacklisted(&name) {
                 let priority = calculate_priority(path, false);
                 index.push(AppEntry {
-                    name,
+                    name: name.into_boxed_str(),
                     path: path.to_path_buf(),
                     priority,
                     is_dir: true,
