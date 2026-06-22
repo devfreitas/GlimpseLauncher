@@ -104,3 +104,28 @@ pub fn save(config: &Config) -> std::io::Result<()> {
     let toml_str = toml::to_string_pretty(config).unwrap_or_default();
     fs::write(&path, toml_str)
 }
+
+pub fn is_autostart_enabled() -> bool {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(run) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run") {
+        let val: Result<String, _> = run.get_value("GlimpseLauncher");
+        return val.is_ok();
+    }
+    false
+}
+
+pub fn toggle_autostart(enable: bool) {
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    if let Ok(run) = hkcu.open_subkey_with_flags(
+        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        KEY_SET_VALUE,
+    ) {
+        if enable {
+            if let Ok(exe) = std::env::current_exe() {
+                let _ = run.set_value("GlimpseLauncher", &exe.to_string_lossy().to_string());
+            }
+        } else {
+            let _ = run.delete_value("GlimpseLauncher");
+        }
+    }
+}

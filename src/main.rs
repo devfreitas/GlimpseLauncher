@@ -19,33 +19,6 @@ use tray_icon::{
     menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder, TrayIconEvent,
 };
-use winreg::enums::{HKEY_CURRENT_USER, KEY_SET_VALUE};
-use winreg::RegKey;
-
-fn is_autostart_enabled() -> bool {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run") {
-        let val: Result<String, _> = run.get_value("GlimpseLauncher");
-        return val.is_ok();
-    }
-    false
-}
-
-fn toggle_autostart(enable: bool) {
-    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run) = hkcu.open_subkey_with_flags(
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-        KEY_SET_VALUE,
-    ) {
-        if enable {
-            if let Ok(exe) = std::env::current_exe() {
-                let _ = run.set_value("GlimpseLauncher", &exe.to_string_lossy().to_string());
-            }
-        } else {
-            let _ = run.delete_value("GlimpseLauncher");
-        }
-    }
-}
 use ui::LauncherApp;
 
 pub enum AppMsg {
@@ -76,7 +49,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_
         "autostart_toggle",
         "Iniciar junto ao Windows",
         true,
-        is_autostart_enabled(),
+        crate::core::config::is_autostart_enabled(),
         None,
     );
     let quit_i = MenuItem::with_id("quit_app", "Sair", true, None);
@@ -106,8 +79,8 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_
                         } else if event.id == "settings_menu" {
                             let _ = tx_focus.send(AppMsg::ShowSettings);
                         } else if event.id == "autostart_toggle" {
-                            let is_checked = is_autostart_enabled();
-                            toggle_autostart(!is_checked);
+                            let is_checked = crate::core::config::is_autostart_enabled();
+                            crate::core::config::toggle_autostart(!is_checked);
                         } else if event.id == "theme_toggle" {
                             let mut config = crate::core::config::load();
                             let is_dark = config

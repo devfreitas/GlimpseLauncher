@@ -129,16 +129,18 @@ impl LauncherApp {
                         );
                     }
                 } else {
-                    let path = HSTRING::from(path_str);
-                    unsafe {
-                        ShellExecuteW(
-                            None,
-                            w!("open"),
-                            &path,
-                            PCWSTR::null(),
-                            PCWSTR::null(),
-                            SW_SHOWNORMAL,
-                        );
+                    if !crate::os::window::focus_window_if_running(path_str) {
+                        let path = HSTRING::from(path_str);
+                        unsafe {
+                            ShellExecuteW(
+                                None,
+                                w!("open"),
+                                &path,
+                                PCWSTR::null(),
+                                PCWSTR::null(),
+                                SW_SHOWNORMAL,
+                            );
+                        }
                     }
                 }
             }
@@ -161,6 +163,37 @@ impl LauncherApp {
         )));
         ctx.request_repaint();
     }
+}
+
+fn custom_switch(ui: &mut egui::Ui, on: &mut bool) -> egui::Response {
+    let desired_size = egui::vec2(36.0, 20.0);
+    let (rect, mut response) = ui.allocate_exact_size(desired_size, egui::Sense::click());
+    if response.clicked() {
+        *on = !*on;
+        response.mark_changed();
+    }
+
+    if ui.is_rect_visible(rect) {
+        let how_on = ui.ctx().animate_bool(response.id, *on);
+        
+        let off_bg_color = egui::Color32::from_rgb(100, 100, 100);
+        let on_bg_color = egui::Color32::from_rgb(46, 204, 113); // Green
+        
+        let bg_color = egui::Color32::from_rgb(
+            ((off_bg_color.r() as f32) * (1.0 - how_on) + (on_bg_color.r() as f32) * how_on) as u8,
+            ((off_bg_color.g() as f32) * (1.0 - how_on) + (on_bg_color.g() as f32) * how_on) as u8,
+            ((off_bg_color.b() as f32) * (1.0 - how_on) + (on_bg_color.b() as f32) * how_on) as u8,
+        );
+        
+        let radius = rect.height() / 2.0;
+        ui.painter().rect_filled(rect, radius, bg_color);
+        
+        let circle_x = egui::lerp((rect.left() + radius + 2.0)..=(rect.right() - radius - 2.0), how_on);
+        let center = egui::pos2(circle_x, rect.center().y);
+        ui.painter().circle_filled(center, radius - 2.0, egui::Color32::WHITE);
+    }
+    
+    response
 }
 
 impl eframe::App for LauncherApp {
@@ -274,7 +307,7 @@ impl eframe::App for LauncherApp {
                                         });
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                             let mut calc_enabled = self.config.enable_calculator.unwrap_or(true);
-                                            if ui.checkbox(&mut calc_enabled, "").changed() {
+                                            if custom_switch(ui, &mut calc_enabled).changed() {
                                                 self.config.enable_calculator = Some(calc_enabled);
                                                 config_changed = true;
                                             }
@@ -294,7 +327,7 @@ impl eframe::App for LauncherApp {
                                         });
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                             let mut web_enabled = self.config.enable_web_search.unwrap_or(true);
-                                            if ui.checkbox(&mut web_enabled, "").changed() {
+                                            if custom_switch(ui, &mut web_enabled).changed() {
                                                 self.config.enable_web_search = Some(web_enabled);
                                                 config_changed = true;
                                             }
@@ -314,7 +347,7 @@ impl eframe::App for LauncherApp {
                                         });
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                                             let mut cmd_enabled = self.config.enable_commands.unwrap_or(true);
-                                            if ui.checkbox(&mut cmd_enabled, "").changed() {
+                                            if custom_switch(ui, &mut cmd_enabled).changed() {
                                                 self.config.enable_commands = Some(cmd_enabled);
                                                 config_changed = true;
                                             }
@@ -322,19 +355,15 @@ impl eframe::App for LauncherApp {
                                     });
 
                                     ui.add_space(32.0);
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new("Posição da Janela").size(12.0).color(desc_color).strong());
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            if ui.button("Mover").clicked() {
-                                                self.is_dragging_mode = true;
-                                                self.show_settings.store(false, Ordering::SeqCst);
-                                                self.is_visible.store(true, Ordering::SeqCst);
-                                            }
-                                        });
-                                    });
+                                    ui.label(egui::RichText::new("Posição da Janela").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
                                     ui.horizontal(|ui| {
                                         ui.label(egui::RichText::new("Posição pré-definida:").color(title_color));
+                                        if ui.button("Mover").clicked() {
+                                            self.is_dragging_mode = true;
+                                            self.show_settings.store(false, Ordering::SeqCst);
+                                            self.is_visible.store(true, Ordering::SeqCst);
+                                        }
                                         if ui.button("Centro").clicked() {
                                             self.config.position_x = Some(0.5);
                                             self.config.position_y = Some(0.25);
@@ -366,20 +395,53 @@ impl eframe::App for LauncherApp {
                                     ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
                                     ui.add_space(12.0);
 
-                                    let info_frame = egui::Frame::none()
-                                        .fill(if is_dark { egui::Color32::from_rgb(30, 30, 35) } else { egui::Color32::from_rgb(240, 240, 245) })
-                                        .rounding(8.0)
-                                        .inner_margin(egui::Margin::same(12.0));
+                                    // Tema Claro/Escuro
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new(if is_dark { egui_phosphor::regular::MOON } else { egui_phosphor::regular::SUN }).size(20.0).color(title_color));
+                                        ui.add_space(12.0);
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new("Tema Escuro").size(15.0).color(title_color));
+                                            ui.add_space(2.0);
+                                            ui.label(egui::RichText::new("Alterna entre o modo claro e escuro.").size(13.0).color(desc_color));
+                                        });
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let mut dark_enabled = is_dark;
+                                            if custom_switch(ui, &mut dark_enabled).changed() {
+                                                let new_theme = if dark_enabled {
+                                                    crate::core::config::ThemeConfig {
+                                                        background_rgba: Some([20, 20, 22, 200]),
+                                                        blur_radius: None,
+                                                    }
+                                                } else {
+                                                    crate::core::config::ThemeConfig {
+                                                        background_rgba: Some([240, 240, 245, 230]),
+                                                        blur_radius: None,
+                                                    }
+                                                };
+                                                self.config.theme = Some(new_theme);
+                                                config_changed = true;
+                                            }
+                                        });
+                                    });
 
-                                    info_frame.show(ui, |ui| {
-                                        ui.horizontal(|ui| {
-                                            ui.label(egui::RichText::new(egui_phosphor::regular::INFO).size(20.0).color(title_color));
-                                            ui.add_space(8.0);
-                                            ui.add(egui::Label::new(
-                                                egui::RichText::new("O Modo Claro/Escuro e Inicialização Automática podem ser alterados clicando com o botão direito no ícone do Glimpse na bandeja do sistema.")
-                                                    .size(13.0)
-                                                    .color(desc_color)
-                                            ).wrap(true));
+                                    ui.add_space(16.0);
+
+                                    // Iniciar com Windows
+                                    ui.horizontal(|ui| {
+                                        ui.label(egui::RichText::new(egui_phosphor::regular::WINDOWS_LOGO).size(20.0).color(title_color));
+                                        ui.add_space(12.0);
+                                        ui.vertical(|ui| {
+                                            ui.label(egui::RichText::new("Iniciar com o Windows").size(15.0).color(title_color));
+                                            ui.add_space(2.0);
+                                            ui.label(egui::RichText::new("Abre o Glimpse automaticamente ao ligar o PC.").size(13.0).color(desc_color));
+                                        });
+                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                            let mut auto_start = crate::core::config::is_autostart_enabled();
+                                            if custom_switch(ui, &mut auto_start).changed() {
+                                                crate::core::config::toggle_autostart(auto_start);
+                                                self.config.start_with_windows = Some(auto_start);
+                                                config_changed = true;
+                                            }
                                         });
                                     });
                                 }); // Close ui.vertical
