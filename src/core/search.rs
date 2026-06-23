@@ -1,19 +1,9 @@
 use crate::core::indexer::AppEntry;
+use crate::utils::{contains_ignore_ascii_case, starts_with_ignore_ascii_case};
 use nucleo_matcher::{
     pattern::{CaseMatching, Normalization, Pattern},
     Config, Matcher,
 };
-
-fn starts_with_ignore_ascii_case(s: &str, prefix: &str) -> bool {
-    if s.len() < prefix.len() { return false; }
-    s.as_bytes()[..prefix.len()].eq_ignore_ascii_case(prefix.as_bytes())
-}
-
-fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
-    if needle.is_empty() { return true; }
-    if haystack.len() < needle.len() { return false; }
-    haystack.as_bytes().windows(needle.len()).any(|w| w.eq_ignore_ascii_case(needle.as_bytes()))
-}
 
 pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
     if query.is_empty() {

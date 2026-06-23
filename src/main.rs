@@ -4,6 +4,7 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod constants;
+mod utils;
 mod core;
 mod os;
 mod ui;
@@ -26,7 +27,7 @@ pub enum AppMsg {
     ShowSettings,
 }
 
-fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_icon::TrayIcon> {
+fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<(tray_icon::TrayIcon, CheckMenuItem)> {
     let icon_data = include_bytes!("../public/icone.ico");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
@@ -81,27 +82,14 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_
                         } else if event.id == "autostart_toggle" {
                             let is_checked = crate::core::config::is_autostart_enabled();
                             crate::core::config::toggle_autostart(!is_checked);
+                            
+                            let mut config = crate::core::config::load();
+                            config.start_with_windows = Some(!is_checked);
+                            let _ = crate::core::config::save(&config);
                         } else if event.id == "theme_toggle" {
                             let mut config = crate::core::config::load();
-                            let is_dark = config
-                                .theme
-                                .as_ref()
-                                .and_then(|t| t.background_rgba)
-                                .map_or(true, |rgba| rgba[0] < 100);
-                            let new_theme = if is_dark {
-                                // Light mode
-                                crate::core::config::ThemeConfig {
-                                    background_rgba: Some([240, 240, 245, 230]),
-                                    blur_radius: None,
-                                }
-                            } else {
-                                // Dark mode
-                                crate::core::config::ThemeConfig {
-                                    background_rgba: Some([20, 20, 22, 200]),
-                                    blur_radius: None,
-                                }
-                            };
-                            config.theme = Some(new_theme);
+                            let current = config.theme.clone().unwrap_or_default();
+                            config.theme = Some(current.toggle());
                             let _ = crate::core::config::save(&config);
                             let _ = tx_focus.send(AppMsg::ShowLauncher); // Focus to show the updated theme
                         }
@@ -122,7 +110,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_
         }
     });
 
-    Some(tray_icon)
+    Some((tray_icon, autostart_i))
 }
 
 fn main() -> Result<(), eframe::Error> {
@@ -192,8 +180,10 @@ fn main() -> Result<(), eframe::Error> {
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
             cc.egui_ctx.set_fonts(fonts);
 
-            if let Some(tray) = create_tray_icon(tx_tray.clone()) {
+            let mut tray_autostart_item = None;
+            if let Some((tray, autostart_i)) = create_tray_icon(tx_tray.clone()) {
                 Box::leak(Box::new(tray));
+                tray_autostart_item = Some(autostart_i);
             }
 
             let ctx = cc.egui_ctx.clone();
@@ -214,7 +204,7 @@ fn main() -> Result<(), eframe::Error> {
                 }
             });
 
-            Box::new(LauncherApp::new(app_visibility, app_settings))
+            Box::new(LauncherApp::new(app_visibility, app_settings, tray_autostart_item))
         }),
     )
 }

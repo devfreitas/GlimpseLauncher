@@ -126,18 +126,7 @@ impl AsRef<str> for AppEntry {
     }
 }
 
-fn contains_ignore_ascii_case(haystack: &str, needle: &str) -> bool {
-    if needle.is_empty() { return true; }
-    if haystack.len() < needle.len() { return false; }
-    haystack.as_bytes().windows(needle.len()).any(|w| w.eq_ignore_ascii_case(needle.as_bytes()))
-}
-
-fn rfind_ignore_ascii_case(haystack: &str, needle: &str) -> Option<usize> {
-    if needle.is_empty() { return Some(haystack.len()); }
-    if haystack.len() < needle.len() { return None; }
-    haystack.as_bytes().windows(needle.len()).enumerate().rev()
-        .find_map(|(i, w)| if w.eq_ignore_ascii_case(needle.as_bytes()) { Some(i) } else { None })
-}
+use crate::utils::{contains_ignore_ascii_case, rfind_ignore_ascii_case};
 
 fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
     if is_uwp {
@@ -171,7 +160,9 @@ fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
 }
 
 fn is_blacklisted(name: &str) -> bool {
-    crate::constants::BLACKLIST.iter().any(|term| contains_ignore_ascii_case(name, term))
+    crate::constants::BLACKLIST
+        .iter()
+        .any(|term| contains_ignore_ascii_case(name, term))
 }
 
 fn is_dir_blacklisted(dir_name: &str) -> bool {
@@ -371,7 +362,7 @@ fn persisted_index_path() -> PathBuf {
     base
 }
 
-fn save_index(index: &Vec<AppEntry>) -> Result<(), std::io::Error> {
+fn save_index(index: &[AppEntry]) -> Result<(), std::io::Error> {
     let path = persisted_index_path();
     if let Some(parent) = path.parent() {
         let _ = std::fs::create_dir_all(parent);

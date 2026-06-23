@@ -4,6 +4,9 @@ use std::path::{Path, PathBuf};
 use winreg::enums::*;
 use winreg::RegKey;
 
+const REGISTRY_RUN_KEY: &str = "Software\\Microsoft\\Windows\\CurrentVersion\\Run";
+const APP_REGISTRY_NAME: &str = "GlimpseLauncher";
+
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
     /// Hot‑key "Alt+S".
@@ -29,6 +32,38 @@ impl Default for ThemeConfig {
         ThemeConfig {
             background_rgba: Some([20, 20, 22, 200]),
             blur_radius: None,
+        }
+    }
+}
+
+impl ThemeConfig {
+    /// Creates the default dark theme.
+    pub fn dark() -> Self {
+        Self {
+            background_rgba: Some([20, 20, 22, 200]),
+            blur_radius: None,
+        }
+    }
+
+    /// Creates the default light theme.
+    pub fn light() -> Self {
+        Self {
+            background_rgba: Some([240, 240, 245, 230]),
+            blur_radius: None,
+        }
+    }
+
+    /// Returns `true` if this theme is considered dark.
+    pub fn is_dark(&self) -> bool {
+        self.background_rgba.map_or(true, |rgba| rgba[0] < 100)
+    }
+
+    /// Returns the opposite theme (dark ↔ light).
+    pub fn toggle(&self) -> Self {
+        if self.is_dark() {
+            Self::light()
+        } else {
+            Self::dark()
         }
     }
 }
@@ -107,8 +142,8 @@ pub fn save(config: &Config) -> std::io::Result<()> {
 
 pub fn is_autostart_enabled() -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run) = hkcu.open_subkey("Software\\Microsoft\\Windows\\CurrentVersion\\Run") {
-        let val: Result<String, _> = run.get_value("GlimpseLauncher");
+    if let Ok(run) = hkcu.open_subkey(REGISTRY_RUN_KEY) {
+        let val: Result<String, _> = run.get_value(APP_REGISTRY_NAME);
         return val.is_ok();
     }
     false
@@ -117,15 +152,15 @@ pub fn is_autostart_enabled() -> bool {
 pub fn toggle_autostart(enable: bool) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     if let Ok(run) = hkcu.open_subkey_with_flags(
-        "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+        REGISTRY_RUN_KEY,
         KEY_SET_VALUE,
     ) {
         if enable {
             if let Ok(exe) = std::env::current_exe() {
-                let _ = run.set_value("GlimpseLauncher", &exe.to_string_lossy().to_string());
+                let _ = run.set_value(APP_REGISTRY_NAME, &exe.to_string_lossy().to_string());
             }
         } else {
-            let _ = run.delete_value("GlimpseLauncher");
+            let _ = run.delete_value(APP_REGISTRY_NAME);
         }
     }
 }

@@ -1,3 +1,5 @@
+/// Blacklisted executable name substrings. Entries containing any of these terms
+/// (case-insensitive) are excluded from search results.
 pub const BLACKLIST: &[&str] = &[
     "unins", "uninstall", "desinstalar", "setup", "installer", "install", "msiexec", "vcredist",
     "dotnet-runtime", "bootstrapper", "clicktorun", "dxwebsetup", "update", "updater", "autoupdate",
@@ -9,11 +11,13 @@ pub const BLACKLIST: &[&str] = &[
     "softwarelogo", "adminflows", "sysinfo", "coretools", "runtimebroker", "sihost", "ctfmon",
     "dllhost", "rundll", "conhost", "csrss", "svchost", "wininit", "winlogon", "lsass", "smss",
     "fontview", "atbroker", "systemreset", "isoburn", "magnify", "narrator", "osk", "sysprep",
-    "wsreset", "taskhost", "notification_helper", "nacl", "swiftshader", "widevine", "clearkey",
+    "wsreset", "taskhost", "nacl", "swiftshader", "widevine", "clearkey",
     "srl", "squirrel", "nuget", "chocolatey", "elevation_service", "readme", "license", "changelog",
     "credits", "copyright", "legal", "manifest", "metadata", "config", "settings",
 ];
 
+/// Blacklisted directory name substrings. Directories matching these terms
+/// are skipped entirely during filesystem scanning.
 pub const DIR_BLACKLIST: &[&str] = &[
     "node_modules", "target", ".git", ".svn", "dist", "build", "temp", "tmp", "cache", "logs",
     "appdata\\local\\temp", "windows\\winsxs", "windows\\servicing",
@@ -22,6 +26,8 @@ pub const DIR_BLACKLIST: &[&str] = &[
     "microsoft\\windowsapps", "appdata\\local\\packages",
 ];
 
+/// Terms that indicate documentation or non-executable content.
+/// Entries matching these are deprioritized in search results.
 pub const DOCS_TERMS: &[&str] = &[
     "documentation", "help", "readme", "manual", "license", "changelog", "credits", "legal", "faq",
 ];

@@ -1,82 +1,248 @@
-# Glimpse Launcher
-
 <div align="center">
-  <img alt="Rust" src="https://img.shields.io/badge/language-Rust-orange.svg">
-  <img alt="Hardware Usage" src="https://img.shields.io/badge/hardware-low--usage-blue">
-  <img alt="Platform" src="https://img.shields.io/badge/platform-Windows%20-lightgrey">
-</div>
 
-<br>
+# ⚡ Glimpse Launcher
+
+**An ultralight, blazing-fast desktop launcher for Windows 11 — built entirely in Rust.**
+
+[![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Windows 11](https://img.shields.io/badge/Windows_11-0078D4?style=for-the-badge&logo=windows11&logoColor=white)](https://www.microsoft.com/windows)
+[![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
+[![Version](https://img.shields.io/badge/v0.6.0-8b5cf6?style=for-the-badge&label=version)](https://github.com/devfreitas/GlimpseLauncher/releases)
+
+<br />
 
 <p align="center">
-  <b>Um lançador de buscas ultraleve e minimalista, focado em performance absoluta, design moderno e baixo consumo de recursos para Windows 11.</b>
+  <em>
+    Launch any app in under <strong>50ms</strong>. Fuzzy search powered by the same engine behind the
+    <a href="https://helix-editor.com/">Helix editor</a>. Zero bloat. Zero Electron.
+  </em>
 </p>
 
-## Sobre o Projeto
+<br />
 
-O **Glimpse Launcher** foi desenvolvido para usuários que buscam produtividade sem comprometer o desempenho do sistema. Construído inteiramente em **Rust**, o projeto aproveita a segurança de memória e a velocidade da linguagem para entregar uma interface gráfica que responde instantaneamente, misturando a elegância de ferramentas como o *Raycast* e o *Wox*, com a leveza de um aplicativo nativo.
+<p align="center">
+  <a href="#-quick-start">Quick Start</a> •
+  <a href="#-features">Features</a> •
+  <a href="#%EF%B8%8F-usage">Usage</a> •
+  <a href="#%EF%B8%8F-architecture">Architecture</a> •
+  <a href="#-roadmap">Roadmap</a>
+</p>
 
-## Funcionalidades e Recursos
+</div>
 
-O Glimpse Launcher oferece um conjunto robusto de ferramentas e otimizações projetadas para o uso fluido e eficiente do sistema operacional:
-
-- **Busca Ultrarrápida e Inteligente:** Utiliza o motor `nucleo-matcher` (o mesmo do editor *Helix*) para um *fuzzy finding* de alta precisão e baixíssimo consumo de CPU.
-- **Eficiência e Desempenho:** Arquitetura *Singleton* com comunicação IPC (evita múltiplas instâncias em memória) e pré-processamento inteligente de índices, garantindo respostas em milissegundos.
-- **Interface Moderna e Intuitiva:** 
-  - Design premium inspirado no *Raycast* e *Wox*, com cantos arredondados, sombras dinâmicas e integração total com o Fluent Design do Windows 11.
-  - Resultados detalhados com título, subtítulo (caminhos e dicas) e tags visuais (`EXE`, `APP`, `FILE`) para rápida identificação.
-- **Personalização e Configurações:** 
-  - Suporte completo a Modo Claro e Modo Escuro, com paletas de cores refinadas e transição instantânea de layout.
-  - Painel de configurações minimalista (acessível via `> config` ou pelo ícone da bandeja) para habilitar ou desabilitar módulos como Calculadora, Pesquisa Web e Terminal.
-- **Controle via Bandeja do Sistema (Tray):**
-  - Alternância rápida entre temas.
-  - Configuração nativa para inicialização automática com o Windows.
-  - Acesso fácil às configurações.
-- **Ferramentas Produtivas Integradas:**
-  - **Calculadora Inline:** Resolva expressões matemáticas (ex: `25 * 4 / 2`) diretamente na barra de pesquisa.
-  - **Execução de Comandos:** Rode comandos rápidos do prompt de comando (CMD) utilizando `> seu comando`.
-  - **Busca de Arquivos:** Localize instantaneamente seus documentos pessoais, imagens e downloads através de uma indexação inteligente de múltiplos níveis.
-  - **Atalhos Web:** Faça pesquisas rápidas na internet utilizando atalhos pré-definidos (ex: `g sua pesquisa`).
-
-## Como Usar
-
-O **Glimpse Launcher** funciona com atalhos simples para agilizar sua produtividade:
-
-- **Abrir o Launcher:** Pressione `Alt + S` ou clique no ícone da bandeja do sistema.
-- **Acessar Configurações:** Digite `> config` na barra de pesquisa ou clique com o botão direito no ícone da bandeja.
-- **Comandos de Terminal:** Digite `> ` seguido do seu comando (ex: `> ping google.com`) para executá-lo diretamente no prompt.
-- **Busca Rápida na Web:** Utilize prefixos. Digite `g sua pesquisa` para buscar no **Google**.
-- **Busca Local:** Digite o nome de um aplicativo ou arquivo local para encontrá-lo instantaneamente.
-- **Cálculos:** Digite uma equação (ex: `15 + 50 * 2`) para obter a resposta via calculadora embutida.
-
-## Como ser um contribuidor?
-
-Como o projeto é desenvolvido em Rust, você precisará do `cargo` instalado.
-
-#### Instalação e Build
-
-```bash
-# 1. Clone o repositório
-$ git clone https://github.com/devfreitas/GlimpseLauncher.git
-
-# 2. Acesse o diretório
-$ cd GlimpseLauncher
-
-# 3. Compile para a versão de release (otimizada)
-$ cargo build --release
-
-# 4. Execute o binário gerado
-$ .\target\release\glimpse_launcher.exe
-```
-- Crie uma branch: `git checkout -b feature/nova-melhoria`.
-- Commit suas mudanças: `git commit -m 'feat: Add nova funcionalidade'`.
-- Push: `git push origin feature/nova-melhoria`.
-- Abra um Pull Request.
-
-<br>
+<br />
 
 ---
 
-<p align="center">
-Criado com foco em eficiência por <a href="HTTPS://github.com/devfreitas">DevFreitas</a>
-</p>
+<br />
+
+## ✨ Features
+
+### 🔍 Search
+
+- ⚡ **Ultra-fast fuzzy search** — Powered by `nucleo-matcher`, the same engine used by the Helix editor
+- 📦 **UWP & Win32 app indexing** — Discovers both classic desktop and modern Store apps automatically
+- 👁️ **File system watcher** — Real-time index updates via `notify` when apps are installed or removed
+- 💾 **Persistent index cache** — Lightning-fast startup with serialized index via `bincode`
+
+### 🧰 Productivity
+
+- 🔢 **Inline calculator** — Type any math expression to get instant results (powered by `evalexpr`)
+- 🌐 **Web search** — Prefix with `g ` to search Google directly from the launcher
+- 🖥️ **Terminal commands** — Prefix with `> ` to execute shell commands without leaving the launcher
+- ⚙️ **Quick settings** — Type `> config` to open the settings panel
+
+### 🎨 User Interface
+
+- 🌗 **Light & Dark themes** — Follows your system preference with a Windows 11 Fluent Design aesthetic
+- 🪟 **Transparent, borderless window** — Frameless, always-on-top, with native transparency
+- 🖱️ **Draggable positioning** — Click and drag the launcher window wherever you want
+- 🧊 **Fluent Design** — Modern rounded corners, subtle shadows, and smooth animations
+
+### ⚙️ System
+
+- 🧬 **Singleton architecture** — IPC-based guard prevents multiple instances via `interprocess`
+- 🚀 **Auto-start with Windows** — Optional registry-based auto-launch on login
+- 🗂️ **System tray** — Background operation with quick-access tray icon and context menu
+- 🦀 **Custom allocator** — Uses `mimalloc` for reduced memory footprint and faster allocations
+
+<br />
+
+## 🚀 Quick Start
+
+### Option A: Download Release
+
+1. Head to [**Releases**](https://github.com/devfreitas/GlimpseLauncher/releases)
+2. Download the latest `.exe` installer
+3. Run & launch with **Alt + S**
+
+### Option B: Build from Source
+
+```bash
+# Clone the repository
+git clone https://github.com/devfreitas/GlimpseLauncher.git
+cd GlimpseLauncher
+
+# Build in release mode (optimized)
+cargo build --release
+
+# Run
+./target/release/glimpse_launcher.exe
+```
+
+> [!NOTE]
+> Building from source requires the [Rust toolchain](https://rustup.rs/) and a Windows 11 development environment with the Windows SDK.
+
+<br />
+
+## ⌨️ Usage
+
+### Hotkeys
+
+| Hotkey | Action |
+|:---|:---|
+| `Alt + S` | Toggle launcher visibility |
+| `↑` `↓` | Navigate through results |
+| `Enter` | Launch selected app / execute command |
+| `Escape` | Hide the launcher |
+
+### Commands
+
+| Prefix / Input | Action | Example |
+|:---|:---|:---|
+| *(just type)* | Fuzzy search apps | `fire` → Firefox |
+| `g <query>` | Search Google | `g rust async` |
+| `> <command>` | Execute terminal command | `> ping 8.8.8.8` |
+| `> config` | Open settings panel | `> config` |
+| *math expression* | Inline calculator | `2^10 + 3 * 7` → `1045` |
+
+<br />
+
+## 🏗️ Architecture
+
+Glimpse follows a clean **modular architecture** with clear separation of concerns:
+
+```
+┌──────────────────────────────────────────────┐
+│                   main.rs                    │
+│          Entrypoint & orchestration           │
+├──────────┬──────────────┬────────────────────┤
+│  core/   │     os/      │       ui/          │
+│          │              │                    │
+│ indexer  │   hotkey     │   launcher UI      │
+│ search   │   window     │   (egui / eframe)  │
+│ config   │              │                    │
+└──────────┴──────────────┴────────────────────┘
+```
+
+| Module | Responsibility |
+|:---|:---|
+| **`core/`** | App indexing (UWP + Win32), fuzzy search engine, configuration management |
+| **`os/`** | Global hotkey registration, native window manipulation (Win32 API) |
+| **`ui/`** | Full launcher interface rendered with `egui` via `eframe` |
+| **`constants.rs`** | Shared constants and application-wide defaults |
+
+<br />
+
+## 🛠️ Tech Stack
+
+| Crate | Purpose |
+|:---|:---|
+| [`eframe`](https://crates.io/crates/eframe) | GUI framework (egui backend for native rendering) |
+| [`nucleo-matcher`](https://crates.io/crates/nucleo-matcher) | High-performance fuzzy matching engine |
+| [`windows`](https://crates.io/crates/windows) | Official Microsoft Win32 API bindings |
+| [`winapi`](https://crates.io/crates/winapi) | Additional low-level Windows API access |
+| [`tray-icon`](https://crates.io/crates/tray-icon) | Cross-platform system tray support |
+| [`interprocess`](https://crates.io/crates/interprocess) | IPC for singleton instance enforcement |
+| [`notify`](https://crates.io/crates/notify) | File system event watcher for live re-indexing |
+| [`bincode`](https://crates.io/crates/bincode) | Fast binary serialization for index cache |
+| [`evalexpr`](https://crates.io/crates/evalexpr) | Math expression evaluator for inline calculator |
+| [`mimalloc`](https://crates.io/crates/mimalloc) | High-performance memory allocator by Microsoft |
+| [`serde`](https://crates.io/crates/serde) / [`toml`](https://crates.io/crates/toml) | Configuration serialization & deserialization |
+| [`egui-phosphor`](https://crates.io/crates/egui-phosphor) | Phosphor icon set for the UI |
+| [`anyhow`](https://crates.io/crates/anyhow) / [`thiserror`](https://crates.io/crates/thiserror) | Ergonomic error handling |
+
+<br />
+
+## 📦 Project Structure
+
+```
+glimpse_launcher/
+├── src/
+│   ├── main.rs              # Entrypoint, IPC guard, tray & event loop
+│   ├── constants.rs          # App-wide constants & defaults
+│   ├── core/
+│   │   ├── mod.rs            # Module declarations
+│   │   ├── indexer.rs        # UWP & Win32 app discovery + caching
+│   │   ├── search.rs         # Fuzzy search via nucleo-matcher
+│   │   └── config.rs         # User settings (TOML persistence)
+│   ├── os/
+│   │   ├── mod.rs            # Module declarations
+│   │   ├── hotkey.rs         # Global hotkey (Alt+S) registration
+│   │   └── window.rs         # Win32 window management & positioning
+│   ├── ui/
+│   │   ├── mod.rs            # Module declarations
+│   │   └── ui.rs             # Full launcher UI (egui/eframe)
+│   └── bin/
+│       └── test_apps.rs      # Dev utility for testing app indexing
+├── public/
+│   ├── icon.png              # App icon (high-res)
+│   └── icone.ico             # App icon (Windows ICO format)
+├── installer/
+│   └── Teste.iss             # Inno Setup installer script
+├── build.rs                  # Build script (winres icon embedding)
+├── Cargo.toml                # Dependencies & build configuration
+├── Cargo.lock                # Reproducible dependency tree
+├── LICENSE                   # MIT License
+└── README.md                 # You are here
+```
+
+<br />
+
+## 🗺️ Roadmap
+
+- [ ] 🔌 Plugin system — Extend functionality with community plugins
+- [ ] 🌍 Internationalization (i18n) — Multi-language UI support
+- [ ] ⌨️ Configurable hotkey — Let users choose their own toggle shortcut
+- [ ] 🔄 Auto-update — Built-in update checker with seamless upgrades
+- [ ] 📦 MSIX packaging — Native Windows Store distribution
+- [ ] 📋 Clipboard history — Search and paste from clipboard history
+
+<br />
+
+## 🤝 Contributing
+
+Contributions are welcome! Whether it's bug reports, feature requests, or pull requests — all input is valued.
+
+Please read [**CONTRIBUTING.md**](CONTRIBUTING.md) for guidelines on how to get started.
+
+```bash
+# Fork → Clone → Branch → Code → PR
+git checkout -b feature/amazing-feature
+cargo test
+cargo clippy
+git commit -m "feat: add amazing feature"
+git push origin feature/amazing-feature
+```
+
+<br />
+
+## 📄 License
+
+This project is licensed under the **MIT License** — see the [LICENSE](LICENSE) file for details.
+
+<br />
+
+<div align="center">
+
+## 👤 Author
+
+**DevFreitas**
+
+[![GitHub](https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white)](https://github.com/devfreitas)
+
+---
+
+<sub>Built with 🦀 Rust and ❤️ by DevFreitas</sub>
+
+</div>

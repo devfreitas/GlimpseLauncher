@@ -41,10 +41,11 @@ pub struct LauncherApp {
     index_receiver: Receiver<Vec<AppEntry>>,
     is_indexing: bool,
     is_dragging_mode: bool,
+    tray_autostart_item: Option<tray_icon::menu::CheckMenuItem>,
 }
 
 impl LauncherApp {
-    pub fn new(is_visible: Arc<AtomicBool>, show_settings: Arc<AtomicBool>) -> Self {
+    pub fn new(is_visible: Arc<AtomicBool>, show_settings: Arc<AtomicBool>, tray_autostart_item: Option<tray_icon::menu::CheckMenuItem>) -> Self {
         let (tx, rx) = crossbeam_channel::unbounded();
 
         let tx_clone = tx.clone();
@@ -68,6 +69,7 @@ impl LauncherApp {
             is_indexing: true,
             is_dragging_mode: false,
             launched_paths: std::collections::HashSet::new(),
+            tray_autostart_item,
         }
     }
 
@@ -153,6 +155,7 @@ impl LauncherApp {
         self.search_query.clear();
         self.selected_index = 0;
         self.filtered.clear();
+        self.launched_paths.clear();
         self.current_height = 62.0;
         ctx.send_viewport_cmd(egui::ViewportCommand::InnerSize(egui::vec2(
             600.0,
@@ -261,8 +264,7 @@ impl eframe::App for LauncherApp {
 
                     let mut config_changed = false;
                     let theme = self.config.theme.clone().unwrap_or_default();
-                    let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
-                    let is_dark = bg[0] < 100;
+                    let is_dark = theme.is_dark();
 
                     let visuals = if is_dark {
                         egui::Visuals::dark()
@@ -408,15 +410,9 @@ impl eframe::App for LauncherApp {
                                             let mut dark_enabled = is_dark;
                                             if custom_switch(ui, &mut dark_enabled).changed() {
                                                 let new_theme = if dark_enabled {
-                                                    crate::core::config::ThemeConfig {
-                                                        background_rgba: Some([20, 20, 22, 200]),
-                                                        blur_radius: None,
-                                                    }
+                                                    crate::core::config::ThemeConfig::dark()
                                                 } else {
-                                                    crate::core::config::ThemeConfig {
-                                                        background_rgba: Some([240, 240, 245, 230]),
-                                                        blur_radius: None,
-                                                    }
+                                                    crate::core::config::ThemeConfig::light()
                                                 };
                                                 self.config.theme = Some(new_theme);
                                                 config_changed = true;
@@ -436,11 +432,14 @@ impl eframe::App for LauncherApp {
                                             ui.label(egui::RichText::new("Abre o Glimpse automaticamente ao ligar o PC.").size(13.0).color(desc_color));
                                         });
                                         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut auto_start = crate::core::config::is_autostart_enabled();
+                                            let mut auto_start = self.config.start_with_windows.unwrap_or(false);
                                             if custom_switch(ui, &mut auto_start).changed() {
                                                 crate::core::config::toggle_autostart(auto_start);
                                                 self.config.start_with_windows = Some(auto_start);
                                                 config_changed = true;
+                                                if let Some(tray_item) = &self.tray_autostart_item {
+                                                    tray_item.set_checked(auto_start);
+                                                }
                                             }
                                         });
                                     });
@@ -482,8 +481,8 @@ impl eframe::App for LauncherApp {
             )));
         }
         let theme = self.config.theme.clone().unwrap_or_default();
+        let is_dark = theme.is_dark();
         let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
-        let is_dark = bg[0] < 100;
 
         let mut visuals = ctx.style().visuals.clone();
 

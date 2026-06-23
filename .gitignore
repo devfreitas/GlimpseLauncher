@@ -1,16 +1,29 @@
+# Build artifacts
 /target/
-**/target/**
+**/target/
+
+# Rust
 Cargo.lock
-**/*.log
 *.rs.bk
-*.swp
+
+# IDE
 .idea/
 .vscode/
+*.iml
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
+Thumbs.db
+Desktop.ini
+
+# Temp files
 *.tmp
 *.temp
 *.bak
-# Optional IDE files
-*.iml
-/installer/
-installer
+*.log
+
+# Installer output (binaries should not be in VCS)
+installer/Output/
