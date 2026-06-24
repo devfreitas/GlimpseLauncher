@@ -1,6 +1,6 @@
-/// Shared string utility functions for case-insensitive ASCII operations.
-///
-/// These are used by both the indexer and search modules to avoid code duplication.
+//! Shared string utility functions for case-insensitive ASCII operations.
+//!
+//! These are used by both the indexer and search modules to avoid code duplication.
 
 /// Case-insensitive substring search (ASCII only).
 ///

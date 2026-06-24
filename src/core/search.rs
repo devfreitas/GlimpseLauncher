@@ -27,7 +27,10 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
             }
 
             let docs = ["documentation", "help", "readme", "manual"];
-            if docs.iter().any(|term| contains_ignore_ascii_case(&app.name, term)) {
+            if docs
+                .iter()
+                .any(|term| contains_ignore_ascii_case(&app.name, term))
+            {
                 final_score /= 10;
             }
 
@@ -35,7 +38,7 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
         })
         .collect();
 
-    results.sort_unstable_by(|a, b| b.0.cmp(&a.0));
+    results.sort_unstable_by_key(|b| std::cmp::Reverse(b.0));
 
     results
         .into_iter()
@@ -43,4 +46,3 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
         .map(|(_, app)| app.clone())
         .collect()
 }
-

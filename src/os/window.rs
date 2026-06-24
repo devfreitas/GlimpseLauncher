@@ -1,3 +1,4 @@
+use std::path::Path;
 use windows::core::{ComInterface, HSTRING, PWSTR};
 use windows::Win32::Foundation::{CloseHandle, BOOL, HWND, LPARAM, MAX_PATH};
 use windows::Win32::System::Com::{
@@ -12,7 +13,6 @@ use windows::Win32::UI::WindowsAndMessaging::{
     EnumWindows, GetWindowThreadProcessId, IsWindowVisible, SetForegroundWindow, ShowWindow,
     SW_RESTORE,
 };
-use std::path::Path;
 
 struct EnumState {
     target_path: String,
@@ -25,13 +25,21 @@ fn resolve_lnk(path: &str) -> String {
     }
     unsafe {
         let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-        if let Ok(shell_link) = CoCreateInstance::<_, IShellLinkW>(&ShellLink, None, CLSCTX_INPROC_SERVER) {
+        if let Ok(shell_link) =
+            CoCreateInstance::<_, IShellLinkW>(&ShellLink, None, CLSCTX_INPROC_SERVER)
+        {
             if let Ok(persist_file) = shell_link.cast::<IPersistFile>() {
                 let path_hstring = HSTRING::from(path);
                 if persist_file.Load(&path_hstring, STGM(0)).is_ok() {
                     let mut buffer: [u16; MAX_PATH as usize] = [0; MAX_PATH as usize];
-                    if shell_link.GetPath(&mut buffer, std::ptr::null_mut(), 0).is_ok() {
-                        let len = buffer.iter().position(|&c| c == 0).unwrap_or(MAX_PATH as usize);
+                    if shell_link
+                        .GetPath(&mut buffer, std::ptr::null_mut(), 0)
+                        .is_ok()
+                    {
+                        let len = buffer
+                            .iter()
+                            .position(|&c| c == 0)
+                            .unwrap_or(MAX_PATH as usize);
                         if len > 0 {
                             return String::from_utf16_lossy(&buffer[..len]);
                         }
@@ -72,7 +80,7 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
 
         if success.is_ok() && size > 0 {
             let exe_path = String::from_utf16_lossy(&buffer[..size as usize]);
-            
+
             // Compare full paths
             if exe_path.eq_ignore_ascii_case(&state.target_path) {
                 ShowWindow(hwnd, SW_RESTORE);
@@ -80,11 +88,17 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
                 state.found = true;
                 return BOOL(0);
             }
-            
+
             // Fallback: If target path has no path (just exe name) or we want to match by stem
-            let exe_stem = Path::new(&exe_path).file_stem().and_then(|s| s.to_str()).unwrap_or("");
-            let target_stem = Path::new(&state.target_path).file_stem().and_then(|s| s.to_str()).unwrap_or("");
-            
+            let exe_stem = Path::new(&exe_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+            let target_stem = Path::new(&state.target_path)
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or("");
+
             if !exe_stem.is_empty() && exe_stem.eq_ignore_ascii_case(target_stem) {
                 ShowWindow(hwnd, SW_RESTORE);
                 SetForegroundWindow(hwnd);

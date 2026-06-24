@@ -122,8 +122,12 @@ pub fn load() -> Config {
         if cfg.start_with_windows.unwrap_or(false) {
             if let Ok(exe_path) = std::env::current_exe() {
                 let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-                if let Ok(run_key) = hkcu.open_subkey_with_flags("Software\\Microsoft\\Windows\\CurrentVersion\\Run", KEY_WRITE) {
-                    let _ = run_key.set_value("GlimpseLauncher", &exe_path.to_string_lossy().to_string());
+                if let Ok(run_key) = hkcu.open_subkey_with_flags(
+                    "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+                    KEY_WRITE,
+                ) {
+                    let _ = run_key
+                        .set_value("GlimpseLauncher", &exe_path.to_string_lossy().to_string());
                 }
             }
         }
@@ -151,10 +155,7 @@ pub fn is_autostart_enabled() -> bool {
 
 pub fn toggle_autostart(enable: bool) {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
-    if let Ok(run) = hkcu.open_subkey_with_flags(
-        REGISTRY_RUN_KEY,
-        KEY_SET_VALUE,
-    ) {
+    if let Ok(run) = hkcu.open_subkey_with_flags(REGISTRY_RUN_KEY, KEY_SET_VALUE) {
         if enable {
             if let Ok(exe) = std::env::current_exe() {
                 let _ = run.set_value(APP_REGISTRY_NAME, &exe.to_string_lossy().to_string());

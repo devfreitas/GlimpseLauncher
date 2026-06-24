@@ -35,30 +35,28 @@ fn scan_uwp_apps(index: &mut Vec<AppEntry>) {
             let mut fetched = 0;
             let mut items: [Option<IShellItem>; 64] = std::array::from_fn(|_| None);
             while enum_items.Next(&mut items, Some(&mut fetched)).is_ok() && fetched > 0 {
-                for i in 0..fetched as usize {
-                    if let Some(item) = &items[i] {
-                        if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
-                            let name = name_pwstr.to_string().unwrap_or_default();
-                            if let Ok(item2) = item.cast::<IShellItem2>() {
-                                if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
-                                    let aumid = aumid_pwstr.to_string().unwrap_or_default();
-    
-                                    if !name.is_empty()
-                                        && !is_blacklisted(&name)
-                                        && !aumid.contains("Internal")
-                                    {
-                                        index.push(AppEntry {
-                                            name: name.into_boxed_str(),
-                                            path: PathBuf::from(format!("UWP:{}", aumid)),
-                                            priority: 100,
-                                            is_dir: false,
-                                        });
-                                    }
-                                    CoTaskMemFree(Some(aumid_pwstr.0 as _));
+                for item in items.iter().take(fetched as usize).flatten() {
+                    if let Ok(name_pwstr) = item.GetDisplayName(SIGDN_NORMALDISPLAY) {
+                        let name = name_pwstr.to_string().unwrap_or_default();
+                        if let Ok(item2) = item.cast::<IShellItem2>() {
+                            if let Ok(aumid_pwstr) = item2.GetString(&PKEY_APP_USER_MODEL_ID) {
+                                let aumid = aumid_pwstr.to_string().unwrap_or_default();
+
+                                if !name.is_empty()
+                                    && !is_blacklisted(&name)
+                                    && !aumid.contains("Internal")
+                                {
+                                    index.push(AppEntry {
+                                        name: name.into_boxed_str(),
+                                        path: PathBuf::from(format!("UWP:{}", aumid)),
+                                        priority: 100,
+                                        is_dir: false,
+                                    });
                                 }
+                                CoTaskMemFree(Some(aumid_pwstr.0 as _));
                             }
-                            CoTaskMemFree(Some(name_pwstr.0 as _));
                         }
+                        CoTaskMemFree(Some(name_pwstr.0 as _));
                     }
                 }
             }
@@ -94,7 +92,7 @@ fn scan_uninstall_registry(index: &mut Vec<AppEntry>) {
                                 let first = s.split_whitespace().next()?;
                                 Some(PathBuf::from(first.trim_matches('"')))
                             })
-                            .unwrap_or_else(|| PathBuf::new());
+                            .unwrap_or_else(PathBuf::new);
                         index.push(AppEntry {
                             name: name.into_boxed_str(),
                             path: exe_path,
@@ -134,10 +132,7 @@ fn calculate_priority(path: &Path, is_uwp: bool) -> u8 {
     }
 
     let p = path.to_string_lossy();
-    let name = path
-        .file_stem()
-        .unwrap_or_default()
-        .to_string_lossy();
+    let name = path.file_stem().unwrap_or_default().to_string_lossy();
 
     if crate::constants::DOCS_TERMS
         .iter()
@@ -166,7 +161,9 @@ fn is_blacklisted(name: &str) -> bool {
 }
 
 fn is_dir_blacklisted(dir_name: &str) -> bool {
-    crate::constants::DIR_BLACKLIST.iter().any(|term| contains_ignore_ascii_case(dir_name, term))
+    crate::constants::DIR_BLACKLIST
+        .iter()
+        .any(|term| contains_ignore_ascii_case(dir_name, term))
 }
 
 fn base_name(name: &str) -> String {
@@ -341,16 +338,18 @@ fn scan_directory(
                     });
                 }
             }
-        } else if include_dirs && path.is_dir() {
-            if !name.starts_with('.') && !is_dir_blacklisted(&name) {
-                let priority = calculate_priority(path, false);
-                index.push(AppEntry {
-                    name: name.into_boxed_str(),
-                    path: path.to_path_buf(),
-                    priority,
-                    is_dir: true,
-                });
-            }
+        } else if include_dirs
+            && path.is_dir()
+            && !name.starts_with('.')
+            && !is_dir_blacklisted(&name)
+        {
+            let priority = calculate_priority(path, false);
+            index.push(AppEntry {
+                name: name.into_boxed_str(),
+                path: path.to_path_buf(),
+                priority,
+                is_dir: true,
+            });
         }
     }
 }
@@ -368,7 +367,7 @@ fn save_index(index: &[AppEntry]) -> Result<(), std::io::Error> {
         let _ = std::fs::create_dir_all(parent);
     }
     let encoded = bincode::encode_to_vec(index, bincode::config::standard())
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        .map_err(std::io::Error::other)?;
     std::fs::write(path, encoded)
 }
 
@@ -420,12 +419,10 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
         let _ = watcher.watch(&downloads, RecursiveMode::NonRecursive);
     }
 
-    for res in debouncer_rx {
-        if let Ok(events) = res {
-            if !events.is_empty() {
-                let new_index = build_index(true);
-                let _ = tx.send(new_index);
-            }
+    for events in debouncer_rx.into_iter().flatten() {
+        if !events.is_empty() {
+            let new_index = build_index(true);
+            let _ = tx.send(new_index);
         }
     }
 }

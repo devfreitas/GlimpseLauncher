@@ -4,10 +4,10 @@
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 mod constants;
-mod utils;
 mod core;
 mod os;
 mod ui;
+mod utils;
 
 use crossbeam_channel::unbounded;
 use eframe::egui;
@@ -27,7 +27,9 @@ pub enum AppMsg {
     ShowSettings,
 }
 
-fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<(tray_icon::TrayIcon, CheckMenuItem)> {
+fn create_tray_icon(
+    tx_focus: crossbeam_channel::Sender<AppMsg>,
+) -> Option<(tray_icon::TrayIcon, CheckMenuItem)> {
     let icon_data = include_bytes!("../public/icone.ico");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
@@ -82,7 +84,7 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<(tray
                         } else if event.id == "autostart_toggle" {
                             let is_checked = crate::core::config::is_autostart_enabled();
                             crate::core::config::toggle_autostart(!is_checked);
-                            
+
                             let mut config = crate::core::config::load();
                             config.start_with_windows = Some(!is_checked);
                             let _ = crate::core::config::save(&config);
@@ -96,14 +98,12 @@ fn create_tray_icon(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<(tray
                     }
                 }
                 recv(tray_channel) -> event_res => {
-                    if let Ok(event) = event_res {
-                        if let tray_icon::TrayIconEvent::Click {
-                            button: tray_icon::MouseButton::Left,
-                            ..
-                        } = event
-                        {
-                            let _ = tx_focus.send(AppMsg::ShowLauncher);
-                        }
+                    if let Ok(tray_icon::TrayIconEvent::Click {
+                        button: tray_icon::MouseButton::Left,
+                        ..
+                    }) = event_res
+                    {
+                        let _ = tx_focus.send(AppMsg::ShowLauncher);
                     }
                 }
             }
@@ -143,13 +143,11 @@ fn main() -> Result<(), eframe::Error> {
 
     let tx_ipc = tx.clone();
     thread::spawn(move || {
-        for conn in listener.incoming() {
-            if let Ok(conn) = conn {
-                let mut conn = BufReader::new(conn);
-                let mut buffer = String::new();
-                if conn.read_line(&mut buffer).is_ok() && buffer.trim() == "FOCAR_TELA" {
-                    let _ = tx_ipc.send(AppMsg::ShowLauncher);
-                }
+        for conn in listener.incoming().flatten() {
+            let mut conn = BufReader::new(conn);
+            let mut buffer = String::new();
+            if conn.read_line(&mut buffer).is_ok() && buffer.trim() == "FOCAR_TELA" {
+                let _ = tx_ipc.send(AppMsg::ShowLauncher);
             }
         }
     });
@@ -204,8 +202,11 @@ fn main() -> Result<(), eframe::Error> {
                 }
             });
 
-            Box::new(LauncherApp::new(app_visibility, app_settings, tray_autostart_item))
+            Box::new(LauncherApp::new(
+                app_visibility,
+                app_settings,
+                tray_autostart_item,
+            ))
         }),
     )
 }
-
