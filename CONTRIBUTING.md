@@ -1,6 +1,6 @@
 # Contributing to Glimpse Launcher
 
-First off, thank you for considering contributing to Glimpse Launcher! 🚀
+First off, thank you for considering contributing to Glimpse Launcher!
 
 Glimpse Launcher is an ultralight desktop launcher for Windows 11, built with Rust for maximum performance and minimal resource usage. Every contribution — whether it's a bug report, a feature request, or a pull request — helps make Glimpse better for everyone.
 
@@ -30,7 +30,7 @@ This project and everyone participating in it is governed by our [Code of Conduc
    ```
 3. **Add the upstream remote**:
    ```bash
-   git remote add upstream https://github.com/DevFreitas/GlimpseLauncher.git
+   git remote add upstream https://github.com/devfreitas/GlimpseLauncher.git
    ```
 4. **Create a branch** for your work (see [Branch Naming Convention](#branch-naming-convention)).
 5. **Make your changes**, ensuring they follow our [Code Style](#code-style).
@@ -219,4 +219,4 @@ We welcome feature ideas! Please [open an issue](https://github.com/DevFreitas/G
 
 ---
 
-Thank you for helping make Glimpse Launcher faster, lighter, and better! ⚡
+Thank you for helping make Glimpse Launcher faster, lighter, and better!
