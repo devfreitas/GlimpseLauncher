@@ -12,7 +12,7 @@ use windows::Win32::UI::WindowsAndMessaging::{
     DestroyIcon, HICON, GetIconInfo, ICONINFO
 };
 use windows::Win32::Graphics::Gdi::{
-    GetObjectW, BITMAP, GetDC, GetDIBits, DIB_RGB_COLORS, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, ReleaseDC
+    GetObjectW, BITMAP, GetDC, GetDIBits, DIB_RGB_COLORS, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, ReleaseDC, DeleteObject, HBITMAP
 };
 
 #[derive(Encode, Decode)]
@@ -75,7 +75,7 @@ impl IconManager {
         drop(cache);
 
         // Check disk cache next
-        let mut disk_cache = self.disk_cache.lock().unwrap();
+        let disk_cache = self.disk_cache.lock().unwrap();
         if let Some(persisted) = disk_cache.get(path) {
             let image = ColorImage::from_rgba_unmultiplied(
                 [persisted.width, persisted.height],
@@ -118,9 +118,36 @@ impl IconManager {
 pub static ICON_MANAGER: Lazy<IconManager> = Lazy::new(|| IconManager::new());
 
 fn extract_icon_image(path: &str) -> Option<ColorImage> {
-    if path.starts_with("UWP:") {
-        // We'll leave UWP icon extraction basic for now or use generic if complex
-        return None; 
+    if let Some(aumid) = path.strip_prefix("UWP:") {
+        // Handle UWP icon via IShellItemImageFactory
+        use windows::Win32::UI::Shell::{SHParseDisplayName, IShellItemImageFactory};
+        use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
+        use windows::core::ComInterface;
+        
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            let shell_path = HSTRING::from(format!("shell:appsFolder\\{}", aumid));
+            let mut pidl = std::ptr::null_mut();
+            if SHParseDisplayName(&shell_path, None, &mut pidl, 0, None).is_ok() {
+                // We need SHCreateItemFromIDList to get IShellItem, or SHBindToObject
+                use windows::Win32::UI::Shell::SHCreateItemFromIDList;
+                if let Ok(item) = SHCreateItemFromIDList::<windows::Win32::UI::Shell::IShellItem>(pidl) {
+                    if let Ok(factory) = item.cast::<IShellItemImageFactory>() {
+                        let size = windows::Win32::Foundation::SIZE { cx: 32, cy: 32 };
+                        // SIIGBF_RESIZETOFIT = 0x00000000
+                        if let Ok(hbitmap) = factory.GetImage(size, windows::Win32::UI::Shell::SIIGBF_RESIZETOFIT) {
+                            let image = hbitmap_to_color_image(hbitmap);
+                            use windows::Win32::Graphics::Gdi::DeleteObject;
+                            DeleteObject(hbitmap);
+                            return image;
+                        }
+                    }
+                }
+                use windows::Win32::System::Com::CoTaskMemFree;
+                CoTaskMemFree(Some(pidl as _));
+            }
+        }
+        return None;
     }
     
     // For normal files/exes, use ExtractIconExW
@@ -153,10 +180,26 @@ unsafe fn hicon_to_color_image(hicon: HICON) -> Option<ColorImage> {
         return None;
     }
 
+    let result = hbitmap_to_color_image(info.hbmColor);
+    
+    // GetIconInfo creates bitmaps that the caller must delete
+    if !info.hbmColor.is_invalid() {
+        DeleteObject(info.hbmColor);
+    }
+    if !info.hbmMask.is_invalid() {
+        DeleteObject(info.hbmMask);
+    }
+
+    result
+}
+
+unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
+    if hbm.is_invalid() { return None; }
+
     let hdc = GetDC(None);
     
     let mut bmp: BITMAP = std::mem::zeroed();
-    if GetObjectW(info.hbmColor, std::mem::size_of::<BITMAP>() as i32, Some(&mut bmp as *mut _ as *mut _)) == 0 {
+    if GetObjectW(hbm, std::mem::size_of::<BITMAP>() as i32, Some(&mut bmp as *mut _ as *mut _)) == 0 {
         ReleaseDC(None, hdc);
         return None;
     }
@@ -175,7 +218,7 @@ unsafe fn hicon_to_color_image(hicon: HICON) -> Option<ColorImage> {
 
     let success = GetDIBits(
         hdc,
-        info.hbmColor,
+        hbm,
         0,
         height as u32,
         Some(pixels.as_mut_ptr() as *mut _),
