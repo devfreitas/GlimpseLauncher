@@ -146,3 +146,6 @@ pub const DOCS_TERMS: &[&str] = &[
     "legal",
     "faq",
 ];
+
+pub const ACCENT_COLOR_LIGHT: [u8; 3] = [91, 127, 219]; // #5B7FDB
+pub const ACCENT_COLOR_DARK: [u8; 3] = [123, 154, 237]; // #7B9AED
