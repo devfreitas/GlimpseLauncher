@@ -799,11 +799,13 @@ impl eframe::App for LauncherApp {
 
                                         ui.vertical(|ui| {
                                             ui.horizontal(|ui| {
-                                                ui.label(
-                                                    egui::RichText::new(&*app.name)
-                                                        .color(text_color)
-                                                        .size(16.0),
-                                                );
+                                                let mut text = egui::RichText::new(&*app.name)
+                                                    .color(text_color)
+                                                    .size(if is_selected { 16.5 } else { 15.5 });
+                                                if is_selected {
+                                                    text = text.strong();
+                                                }
+                                                ui.label(text);
 
                                                 if is_selected {
                                                     ui.with_layout(
@@ -822,19 +824,29 @@ impl eframe::App for LauncherApp {
                                                             } else {
                                                                 "EXE"
                                                             };
-                                                            ui.label(
-                                                                egui::RichText::new(tag)
-                                                                    .size(10.0)
-                                                                    .color(if is_dark {
-                                                                        egui::Color32::from_gray(
-                                                                            100,
-                                                                        )
-                                                                    } else {
-                                                                        egui::Color32::from_gray(
-                                                                            120,
-                                                                        )
-                                                                    }),
-                                                            );
+                                                            let pill_bg = if is_dark {
+                                                                egui::Color32::from_rgba_unmultiplied(100, 100, 100, 50)
+                                                            } else {
+                                                                egui::Color32::from_rgba_unmultiplied(150, 150, 150, 50)
+                                                            };
+                                                            let pill_text_color = if is_dark {
+                                                                egui::Color32::from_gray(200)
+                                                            } else {
+                                                                egui::Color32::from_gray(60)
+                                                            };
+
+                                                            egui::Frame::none()
+                                                                .fill(pill_bg)
+                                                                .rounding(10.0)
+                                                                .inner_margin(egui::Margin::symmetric(8.0, 3.0))
+                                                                .show(ui, |ui| {
+                                                                    ui.label(
+                                                                        egui::RichText::new(tag)
+                                                                            .size(10.0)
+                                                                            .strong()
+                                                                            .color(pill_text_color),
+                                                                    );
+                                                                });
                                                         },
                                                     );
                                                 }
