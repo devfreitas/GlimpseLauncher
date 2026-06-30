@@ -491,6 +491,14 @@ impl eframe::App for LauncherApp {
         let is_dark = theme.is_dark();
         let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
 
+        let accent_color = if is_dark {
+            let c = crate::constants::ACCENT_COLOR_DARK;
+            egui::Color32::from_rgb(c[0], c[1], c[2])
+        } else {
+            let c = crate::constants::ACCENT_COLOR_LIGHT;
+            egui::Color32::from_rgb(c[0], c[1], c[2])
+        };
+
         let mut visuals = ctx.style().visuals.clone();
 
         // Ensure the OS window background is completely transparent so only our rounded frame is visible.
@@ -626,11 +634,8 @@ impl eframe::App for LauncherApp {
                 } else {
                     egui::Color32::from_rgba_premultiplied(245, 245, 250, 255)
                 };
-                let input_stroke = if is_dark {
-                    egui::Color32::from_rgba_premultiplied(80, 80, 100, 255)
-                } else {
-                    egui::Color32::from_rgba_premultiplied(200, 200, 215, 255)
-                };
+                // Borda do campo de busca colorida para indicar foco
+                let input_stroke = accent_color;
 
                 egui::Frame::none()
                     .fill(input_fill)
@@ -734,29 +739,24 @@ impl eframe::App for LauncherApp {
                                     .inner_margin(egui::Margin::symmetric(12.0, 8.0))
                                     .fill(if is_selected {
                                         if is_dark {
-                                            egui::Color32::from_rgba_premultiplied(50, 50, 70, 255)
+                                            egui::Color32::from_rgba_premultiplied(
+                                                accent_color.r() / 3,
+                                                accent_color.g() / 3,
+                                                accent_color.b() / 3,
+                                                40,
+                                            )
                                         } else {
                                             egui::Color32::from_rgba_premultiplied(
-                                                210, 210, 225, 255,
+                                                accent_color.r() / 8 + 200,
+                                                accent_color.g() / 8 + 200,
+                                                accent_color.b() / 8 + 200,
+                                                40,
                                             )
                                         }
                                     } else {
                                         egui::Color32::TRANSPARENT
                                     })
-                                    .stroke(if is_selected {
-                                        let stroke_color = if is_dark {
-                                            egui::Color32::from_rgba_unmultiplied(
-                                                100, 100, 150, 100,
-                                            )
-                                        } else {
-                                            egui::Color32::from_rgba_unmultiplied(
-                                                160, 160, 180, 150,
-                                            )
-                                        };
-                                        egui::Stroke::new(1.0, stroke_color)
-                                    } else {
-                                        egui::Stroke::NONE
-                                    });
+                                    .stroke(egui::Stroke::NONE);
 
                                 let response = item_frame.show(ui, |ui| {
                                     ui.set_width(ui.available_width());
@@ -841,11 +841,7 @@ impl eframe::App for LauncherApp {
                                             });
 
                                             let subtitle_color = if is_selected {
-                                                if is_dark {
-                                                    egui::Color32::from_gray(150)
-                                                } else {
-                                                    egui::Color32::from_gray(100)
-                                                }
+                                                accent_color
                                             } else {
                                                 if is_dark {
                                                     egui::Color32::from_gray(100)
@@ -871,6 +867,13 @@ impl eframe::App for LauncherApp {
                                 });
 
                                 if is_selected {
+                                    let mut border_rect = response.response.rect;
+                                    border_rect.max.x = border_rect.min.x + 3.0;
+                                    ui.painter().rect_filled(
+                                        border_rect,
+                                        egui::Rounding { nw: 8.0, sw: 8.0, ne: 0.0, se: 0.0 },
+                                        accent_color,
+                                    );
                                     response.response.scroll_to_me(None);
                                 }
                             }
