@@ -536,11 +536,17 @@ impl eframe::App for LauncherApp {
             egui::Color32::from_rgba_premultiplied(200, 200, 215, 255)
         };
 
+        let mut shadow = ctx.style().visuals.window_shadow;
+        // Shadow offset depends on egui version, some use [f32; 2], some use Vec2. We'll just modify blur and color.
+        shadow.blur = 30.0;
+        shadow.color = egui::Color32::from_black_alpha(150);
+
         let frame_style = egui::Frame {
-            fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
+            fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], (bg[3] as f32 * 0.8) as u8),
             rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
             stroke: egui::Stroke::new(1.0, frame_stroke),
             inner_margin: egui::Margin::same(8.0), // adds breathing room to the edges
+            shadow,
             ..Default::default()
         };
         let mut visuals = ctx.style().visuals.clone();
