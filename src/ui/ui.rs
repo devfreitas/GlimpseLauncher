@@ -776,16 +776,20 @@ impl eframe::App for LauncherApp {
                                             && !path_str.ends_with(".lnk")
                                             && !path_str.ends_with(".LNK");
 
-                                        let icon = if path_str.starts_with("MATH:") {
-                                            egui_phosphor::regular::CALCULATOR
-                                        } else if app.is_dir {
-                                            egui_phosphor::regular::FOLDER
-                                        } else if is_file {
-                                            egui_phosphor::regular::FILE_TEXT
+                                        if let Some(texture) = crate::core::icons::ICON_MANAGER.get_icon(ctx, &path_str) {
+                                            ui.add(egui::Image::new(&texture).fit_to_exact_size(egui::vec2(22.0, 22.0)));
                                         } else {
-                                            egui_phosphor::regular::ROCKET
-                                        };
-                                        ui.label(egui::RichText::new(icon).size(18.0));
+                                            let icon = if path_str.starts_with("MATH:") {
+                                                egui_phosphor::regular::CALCULATOR
+                                            } else if app.is_dir {
+                                                egui_phosphor::regular::FOLDER
+                                            } else if is_file {
+                                                egui_phosphor::regular::FILE_TEXT
+                                            } else {
+                                                egui_phosphor::regular::ROCKET
+                                            };
+                                            ui.label(egui::RichText::new(icon).size(18.0));
+                                        }
 
                                         ui.add_space(12.0);
 
