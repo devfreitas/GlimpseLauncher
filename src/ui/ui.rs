@@ -469,7 +469,7 @@ impl eframe::App for LauncherApp {
             return;
         }
 
-        let mut target_height = 62.0;
+        let mut target_height = 70.0;
         if self.is_dragging_mode {
             target_height += 48.0;
         }
@@ -545,7 +545,12 @@ impl eframe::App for LauncherApp {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], (bg[3] as f32 * 0.8) as u8),
             rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
             stroke: egui::Stroke::new(1.0, frame_stroke),
-            inner_margin: egui::Margin::same(8.0), // adds breathing room to the edges
+            inner_margin: egui::Margin {
+                left: 8.0,
+                right: 8.0,
+                top: 8.0,
+                bottom: 16.0,
+            },
             shadow,
             ..Default::default()
         };
@@ -786,7 +791,7 @@ impl eframe::App for LauncherApp {
                                             } else if is_file {
                                                 egui_phosphor::regular::FILE_TEXT
                                             } else {
-                                                egui_phosphor::regular::ROCKET
+                                                egui_phosphor::regular::APP_WINDOW
                                             };
                                             ui.label(egui::RichText::new(icon).size(18.0));
                                         }
@@ -829,6 +834,8 @@ impl eframe::App for LauncherApp {
                                                                 "CALC"
                                                             } else if path_str.starts_with("UWP:") {
                                                                 "APP"
+                                                            } else if app.is_dir {
+                                                                "DIR"
                                                             } else if is_file {
                                                                 "FILE"
                                                             } else {
