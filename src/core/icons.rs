@@ -1,19 +1,18 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-use eframe::egui::{ColorImage, TextureHandle, Context};
+use bincode::{Decode, Encode};
+use eframe::egui::{ColorImage, Context, TextureHandle};
 use once_cell::sync::Lazy;
-use windows::core::HSTRING;
+use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use bincode::{Encode, Decode};
+use std::sync::{Arc, Mutex};
+use windows::core::HSTRING;
 
-use windows::Win32::UI::Shell::ExtractIconExW;
-use windows::Win32::UI::WindowsAndMessaging::{
-    DestroyIcon, HICON, GetIconInfo, ICONINFO
-};
 use windows::Win32::Graphics::Gdi::{
-    GetObjectW, BITMAP, GetDC, GetDIBits, DIB_RGB_COLORS, BITMAPINFO, BITMAPINFOHEADER, BI_RGB, ReleaseDC, DeleteObject, HBITMAP
+    DeleteObject, GetDC, GetDIBits, GetObjectW, ReleaseDC, BITMAP, BITMAPINFO, BITMAPINFOHEADER,
+    BI_RGB, DIB_RGB_COLORS, HBITMAP,
 };
+use windows::Win32::UI::Shell::ExtractIconExW;
+use windows::Win32::UI::WindowsAndMessaging::{DestroyIcon, GetIconInfo, HICON, ICONINFO};
 
 #[derive(Encode, Decode)]
 pub struct PersistedIcon {
@@ -49,7 +48,10 @@ impl IconManager {
         let path = Self::cache_path();
         if path.exists() {
             if let Ok(bytes) = fs::read(&path) {
-                if let Ok((data, _)) = bincode::decode_from_slice::<HashMap<String, PersistedIcon>, _>(&bytes, bincode::config::standard()) {
+                if let Ok((data, _)) = bincode::decode_from_slice::<HashMap<String, PersistedIcon>, _>(
+                    &bytes,
+                    bincode::config::standard(),
+                ) {
                     *self.disk_cache.lock().unwrap() = data;
                 }
             }
@@ -86,7 +88,10 @@ impl IconManager {
                 image,
                 eframe::egui::TextureOptions::LINEAR,
             );
-            self.cache.lock().unwrap().insert(path.to_string(), handle.clone());
+            self.cache
+                .lock()
+                .unwrap()
+                .insert(path.to_string(), handle.clone());
             return Some(handle);
         }
         drop(disk_cache);
@@ -97,9 +102,16 @@ impl IconManager {
             let persisted = PersistedIcon {
                 width: image.size[0],
                 height: image.size[1],
-                pixels: image.pixels.iter().flat_map(|c| vec![c.r(), c.g(), c.b(), c.a()]).collect(),
+                pixels: image
+                    .pixels
+                    .iter()
+                    .flat_map(|c| vec![c.r(), c.g(), c.b(), c.a()])
+                    .collect(),
             };
-            self.disk_cache.lock().unwrap().insert(path.to_string(), persisted);
+            self.disk_cache
+                .lock()
+                .unwrap()
+                .insert(path.to_string(), persisted);
             self.save_disk_cache();
 
             let handle = ctx.load_texture(
@@ -107,7 +119,10 @@ impl IconManager {
                 image,
                 eframe::egui::TextureOptions::LINEAR,
             );
-            self.cache.lock().unwrap().insert(path.to_string(), handle.clone());
+            self.cache
+                .lock()
+                .unwrap()
+                .insert(path.to_string(), handle.clone());
             return Some(handle);
         }
 
@@ -115,15 +130,15 @@ impl IconManager {
     }
 }
 
-pub static ICON_MANAGER: Lazy<IconManager> = Lazy::new(|| IconManager::new());
+pub static ICON_MANAGER: Lazy<IconManager> = Lazy::new(IconManager::new);
 
 fn extract_icon_image(path: &str) -> Option<ColorImage> {
     if let Some(aumid) = path.strip_prefix("UWP:") {
         // Handle UWP icon via IShellItemImageFactory
-        use windows::Win32::UI::Shell::{SHParseDisplayName, IShellItemImageFactory};
-        use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
         use windows::core::ComInterface;
-        
+        use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
+        use windows::Win32::UI::Shell::{IShellItemImageFactory, SHParseDisplayName};
+
         unsafe {
             let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
             let shell_path = HSTRING::from(format!("shell:appsFolder\\{}", aumid));
@@ -131,11 +146,15 @@ fn extract_icon_image(path: &str) -> Option<ColorImage> {
             if SHParseDisplayName(&shell_path, None, &mut pidl, 0, None).is_ok() {
                 // We need SHCreateItemFromIDList to get IShellItem, or SHBindToObject
                 use windows::Win32::UI::Shell::SHCreateItemFromIDList;
-                if let Ok(item) = SHCreateItemFromIDList::<windows::Win32::UI::Shell::IShellItem>(pidl) {
+                if let Ok(item) =
+                    SHCreateItemFromIDList::<windows::Win32::UI::Shell::IShellItem>(pidl)
+                {
                     if let Ok(factory) = item.cast::<IShellItemImageFactory>() {
                         let size = windows::Win32::Foundation::SIZE { cx: 32, cy: 32 };
                         // SIIGBF_RESIZETOFIT = 0x00000000
-                        if let Ok(hbitmap) = factory.GetImage(size, windows::Win32::UI::Shell::SIIGBF_RESIZETOFIT) {
+                        if let Ok(hbitmap) =
+                            factory.GetImage(size, windows::Win32::UI::Shell::SIIGBF_RESIZETOFIT)
+                        {
                             let image = hbitmap_to_color_image(hbitmap);
                             use windows::Win32::Graphics::Gdi::DeleteObject;
                             DeleteObject(hbitmap);
@@ -149,20 +168,14 @@ fn extract_icon_image(path: &str) -> Option<ColorImage> {
         }
         return None;
     }
-    
+
     // For normal files/exes, use ExtractIconExW
     let path_hstr = HSTRING::from(path);
     let mut icon_large: [HICON; 1] = [HICON::default(); 1];
-    
+
     unsafe {
-        let extracted = ExtractIconExW(
-            &path_hstr,
-            0,
-            Some(icon_large.as_mut_ptr()),
-            None,
-            1,
-        );
-        
+        let extracted = ExtractIconExW(&path_hstr, 0, Some(icon_large.as_mut_ptr()), None, 1);
+
         if extracted > 0 && !icon_large[0].is_invalid() {
             let hicon = icon_large[0];
             let image = hicon_to_color_image(hicon);
@@ -170,7 +183,7 @@ fn extract_icon_image(path: &str) -> Option<ColorImage> {
             return image;
         }
     }
-    
+
     None
 }
 
@@ -181,7 +194,7 @@ unsafe fn hicon_to_color_image(hicon: HICON) -> Option<ColorImage> {
     }
 
     let result = hbitmap_to_color_image(info.hbmColor);
-    
+
     // GetIconInfo creates bitmaps that the caller must delete
     if !info.hbmColor.is_invalid() {
         DeleteObject(info.hbmColor);
@@ -194,12 +207,19 @@ unsafe fn hicon_to_color_image(hicon: HICON) -> Option<ColorImage> {
 }
 
 unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
-    if hbm.is_invalid() { return None; }
+    if hbm.is_invalid() {
+        return None;
+    }
 
     let hdc = GetDC(None);
-    
+
     let mut bmp: BITMAP = std::mem::zeroed();
-    if GetObjectW(hbm, std::mem::size_of::<BITMAP>() as i32, Some(&mut bmp as *mut _ as *mut _)) == 0 {
+    if GetObjectW(
+        hbm,
+        std::mem::size_of::<BITMAP>() as i32,
+        Some(&mut bmp as *mut _ as *mut _),
+    ) == 0
+    {
         ReleaseDC(None, hdc);
         return None;
     }
@@ -227,7 +247,7 @@ unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
     );
 
     ReleaseDC(None, hdc);
-    
+
     if success == 0 {
         return None;
     }
