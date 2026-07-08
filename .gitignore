@@ -27,3 +27,6 @@ Desktop.ini
 
 # Installer output (binaries should not be in VCS)
 installer/
+
+.agents/
+.agents

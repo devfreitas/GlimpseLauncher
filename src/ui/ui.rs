@@ -896,11 +896,20 @@ impl eframe::App for LauncherApp {
                                 });
 
                                 if is_selected {
-                                    let mut border_rect = response.response.rect;
-                                    border_rect.max.x = border_rect.min.x + 3.0;
+                                    let item_height = response.response.rect.height();
+                                    let pill_height = 24.0; 
+                                    let mut pill_rect = response.response.rect;
+                                    
+                                    // Centraliza verticalmente
+                                    pill_rect.min.y += (item_height - pill_height) / 2.0;
+                                    pill_rect.max.y = pill_rect.min.y + pill_height;
+                                    
+                                    // Afasta um pouquinho da borda e define a largura
+                                    pill_rect.max.x = pill_rect.min.x + 4.0;
+                                    
                                     ui.painter().rect_filled(
-                                        border_rect,
-                                        egui::Rounding { nw: 8.0, sw: 8.0, ne: 0.0, se: 0.0 },
+                                        pill_rect,
+                                        egui::Rounding::same(2.0), // totalmente arredondada
                                         accent_color,
                                     );
                                     response.response.scroll_to_me(None);
