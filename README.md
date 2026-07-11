@@ -233,5 +233,4 @@ Este projeto está licenciado sob a **Licença MIT** — veja o arquivo [LICENSE
 
 <div align="center">
 <sub>Criado com foco em eficiência em Rust 🦀</sub>
-<<<<<<< HEAD
 </div>
