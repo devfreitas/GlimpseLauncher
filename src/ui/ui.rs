@@ -469,15 +469,15 @@ impl eframe::App for LauncherApp {
             return;
         }
 
-        let mut target_height = 70.0;
+        let mut target_height = 55.0;
         if self.is_dragging_mode {
             target_height += 48.0;
         }
         if !self.filtered.is_empty() {
-            target_height += 10.0;
+            target_height += 8.0;
             let items_to_show = self.filtered.len().min(3) as f32; // Show up to 3 items initially
-            target_height += items_to_show * 44.0;
-            target_height += 10.0;
+            target_height += items_to_show * 36.0;
+            target_height += 4.0;
         }
 
         if (self.current_height - target_height).abs() > 0.5 {
@@ -546,10 +546,10 @@ impl eframe::App for LauncherApp {
             rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
             stroke: egui::Stroke::new(1.0, frame_stroke),
             inner_margin: egui::Margin {
-                left: 8.0,
-                right: 8.0,
-                top: 8.0,
-                bottom: 16.0,
+                left: 3.0,
+                right: 3.0,
+                top: 3.0,
+                bottom: 1.0,
             },
             shadow: egui::epaint::Shadow::NONE,
             ..Default::default()
@@ -747,7 +747,7 @@ impl eframe::App for LauncherApp {
 
                                 let item_frame = egui::Frame::none()
                                     .rounding(8.0) // rounded list items like Raycast/Spotlight
-                                    .inner_margin(egui::Margin::symmetric(12.0, 8.0))
+                                    .inner_margin(egui::Margin::symmetric(12.0, 4.0))
                                     .fill(if is_selected {
                                         if is_dark {
                                             egui::Color32::from_rgba_premultiplied(
