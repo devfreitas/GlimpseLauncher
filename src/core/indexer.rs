@@ -316,22 +316,24 @@ fn scan_directory(
 
     for entry in walker.filter_map(|e| e.ok()) {
         let path = entry.path();
-        let name = path
+        let name_cow = path
             .file_stem()
             .unwrap_or_default()
-            .to_string_lossy()
-            .to_string();
+            .to_string_lossy();
 
-        if is_blacklisted(&name) {
+        if is_blacklisted(&name_cow) {
             continue;
         }
 
         if path.is_file() {
             if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
-                if allowed_extensions.contains(&ext.to_lowercase().as_str()) {
+                if allowed_extensions
+                    .iter()
+                    .any(|allowed| allowed.eq_ignore_ascii_case(ext))
+                {
                     let priority = calculate_priority(path, false);
                     index.push(AppEntry {
-                        name: name.clone().into_boxed_str(),
+                        name: name_cow.into_owned().into_boxed_str(),
                         path: path.to_path_buf(),
                         priority,
                         is_dir: false,
@@ -340,12 +342,12 @@ fn scan_directory(
             }
         } else if include_dirs
             && path.is_dir()
-            && !name.starts_with('.')
-            && !is_dir_blacklisted(&name)
+            && !name_cow.starts_with('.')
+            && !is_dir_blacklisted(&name_cow)
         {
             let priority = calculate_priority(path, false);
             index.push(AppEntry {
-                name: name.into_boxed_str(),
+                name: name_cow.into_owned().into_boxed_str(),
                 path: path.to_path_buf(),
                 priority,
                 is_dir: true,

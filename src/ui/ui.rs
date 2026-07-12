@@ -27,6 +27,9 @@ static APP_ICON: Lazy<Arc<egui::IconData>> = Lazy::new(|| {
     })
 });
 
+static DEFAULT_THEME: Lazy<crate::core::config::ThemeConfig> =
+    Lazy::new(crate::core::config::ThemeConfig::default);
+
 pub struct LauncherApp {
     search_query: String,
     index: Vec<AppEntry>,
@@ -155,6 +158,7 @@ impl LauncherApp {
     }
 
     pub fn hide(&mut self, ctx: &egui::Context) {
+        crate::core::icons::ICON_MANAGER.flush_if_dirty();
         self.is_visible.store(false, Ordering::SeqCst);
         self.search_query.clear();
         self.selected_index = 0;
@@ -599,7 +603,7 @@ impl eframe::App for LauncherApp {
                 self.current_height,
             )));
         }
-        let theme = self.config.theme.clone().unwrap_or_default();
+        let theme = self.config.theme.as_ref().unwrap_or(&DEFAULT_THEME);
         let is_dark = theme.is_dark();
         let bg = if is_dark {
             [15, 15, 15, 242] // Preto fosco com 95% de opacidade
@@ -633,8 +637,6 @@ impl eframe::App for LauncherApp {
             visuals.widgets.hovered.bg_fill =
                 egui::Color32::from_rgba_unmultiplied(45, 45, 50, 210);
             visuals.widgets.active.bg_fill = egui::Color32::from_rgba_unmultiplied(55, 55, 60, 220);
-            visuals.widgets.inactive.bg_stroke =
-                egui::Stroke::new(1.0, egui::Color32::from_rgba_unmultiplied(80, 80, 90, 120));
             visuals.override_text_color = Some(egui::Color32::WHITE);
         } else {
             visuals.widgets.inactive.bg_fill =
@@ -643,12 +645,10 @@ impl eframe::App for LauncherApp {
                 egui::Color32::from_rgba_unmultiplied(220, 220, 225, 210);
             visuals.widgets.active.bg_fill =
                 egui::Color32::from_rgba_unmultiplied(210, 210, 215, 220);
-            visuals.widgets.inactive.bg_stroke = egui::Stroke::new(
-                1.0,
-                egui::Color32::from_rgba_unmultiplied(200, 200, 210, 120),
-            );
             visuals.override_text_color = Some(egui::Color32::BLACK);
         }
+        visuals.widgets.inactive.bg_stroke =
+            egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
         visuals.window_rounding = egui::Rounding::same(12.0);
         ctx.set_visuals(visuals);
 
@@ -671,10 +671,6 @@ impl eframe::App for LauncherApp {
             shadow: egui::epaint::Shadow::NONE,
             ..Default::default()
         };
-        let mut visuals = ctx.style().visuals.clone();
-        visuals.widgets.inactive.bg_stroke =
-            egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
-        ctx.set_visuals(visuals);
 
         egui::CentralPanel::default()
             .frame(frame_style)
@@ -840,17 +836,25 @@ impl eframe::App for LauncherApp {
                     });
                 }
 
-                if ui.input(|i| i.key_pressed(egui::Key::ArrowDown)) {
+                let (key_down, key_up, key_enter, key_escape) = ui.input(|i| {
+                    (
+                        i.key_pressed(egui::Key::ArrowDown),
+                        i.key_pressed(egui::Key::ArrowUp),
+                        i.key_pressed(egui::Key::Enter),
+                        i.key_pressed(egui::Key::Escape),
+                    )
+                });
+                if key_down {
                     self.selected_index =
                         (self.selected_index + 1).min(self.filtered.len().saturating_sub(1));
                 }
-                if ui.input(|i| i.key_pressed(egui::Key::ArrowUp)) {
+                if key_up {
                     self.selected_index = self.selected_index.saturating_sub(1);
                 }
-                if ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+                if key_enter {
                     self.execute_selected(ctx);
                 }
-                if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                if key_escape {
                     self.hide(ctx);
                 }
 

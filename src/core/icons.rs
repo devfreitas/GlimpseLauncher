@@ -4,7 +4,10 @@ use once_cell::sync::Lazy;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use windows::core::HSTRING;
 
 use windows::Win32::Graphics::Gdi::{
@@ -25,6 +28,7 @@ pub struct PersistedIcon {
 pub struct IconManager {
     cache: Arc<Mutex<HashMap<String, TextureHandle>>>,
     disk_cache: Arc<Mutex<HashMap<String, PersistedIcon>>>,
+    dirty: Arc<AtomicBool>,
 }
 
 impl IconManager {
@@ -32,6 +36,7 @@ impl IconManager {
         let mut manager = Self {
             cache: Arc::new(Mutex::new(HashMap::new())),
             disk_cache: Arc::new(Mutex::new(HashMap::new())),
+            dirty: Arc::new(AtomicBool::new(false)),
         };
         manager.load_disk_cache();
         manager
@@ -69,6 +74,20 @@ impl IconManager {
         }
     }
 
+    pub fn mark_dirty(&self) {
+        self.dirty.store(true, Ordering::Relaxed);
+    }
+
+    pub fn flush_if_dirty(&self) {
+        if self
+            .dirty
+            .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed)
+            .is_ok()
+        {
+            self.save_disk_cache();
+        }
+    }
+
     pub fn get_icon(&self, ctx: &Context, path: &str) -> Option<TextureHandle> {
         let cache = self.cache.lock().unwrap();
         if let Some(handle) = cache.get(path) {
@@ -102,14 +121,14 @@ impl IconManager {
                 pixels: image
                     .pixels
                     .iter()
-                    .flat_map(|c| vec![c.r(), c.g(), c.b(), c.a()])
+                    .flat_map(|c| [c.r(), c.g(), c.b(), c.a()])
                     .collect(),
             };
             self.disk_cache
                 .lock()
                 .unwrap()
                 .insert(path.to_string(), persisted);
-            self.save_disk_cache();
+            self.mark_dirty();
 
             let handle = ctx.load_texture(
                 format!("icon_{}", path),
@@ -244,17 +263,16 @@ unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
         return None;
     }
 
-    let mut rgba_pixels = Vec::with_capacity((width * height * 4) as usize);
-    for &p in &pixels {
-        let a = ((p >> 24) & 0xFF) as u8;
-        let r = ((p >> 16) & 0xFF) as u8;
-        let g = ((p >> 8) & 0xFF) as u8;
-        let b = (p & 0xFF) as u8;
-        rgba_pixels.push(r);
-        rgba_pixels.push(g);
-        rgba_pixels.push(b);
-        rgba_pixels.push(a);
-    }
+    let rgba_pixels: Vec<u8> = pixels
+        .iter()
+        .flat_map(|&p| {
+            let r = ((p >> 16) & 0xFF) as u8;
+            let g = ((p >> 8) & 0xFF) as u8;
+            let b = (p & 0xFF) as u8;
+            let a = ((p >> 24) & 0xFF) as u8;
+            [r, g, b, a]
+        })
+        .collect();
 
     Some(ColorImage::from_rgba_unmultiplied(
         [width as usize, height as usize],
