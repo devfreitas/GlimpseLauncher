@@ -409,15 +409,9 @@ pub fn start_watcher(tx: crossbeam_channel::Sender<Vec<AppEntry>>) {
     if let Some(desktop) = dirs::desktop_dir() {
         let _ = watcher.watch(&desktop, RecursiveMode::NonRecursive);
     }
-    if let Some(docs) = dirs::document_dir() {
-        let _ = watcher.watch(&docs, RecursiveMode::NonRecursive);
-    }
-    if let Some(pics) = dirs::picture_dir() {
-        let _ = watcher.watch(&pics, RecursiveMode::NonRecursive);
-    }
-    if let Some(downloads) = dirs::download_dir() {
-        let _ = watcher.watch(&downloads, RecursiveMode::NonRecursive);
-    }
+    // We intentionally do not watch Documents, Pictures, or Downloads.
+    // These folders receive frequent I/O (e.g., saving files, browser downloads).
+    // Watching them triggers a full index rebuild, causing severe CPU spikes.
 
     for events in debouncer_rx.into_iter().flatten() {
         if !events.is_empty() {

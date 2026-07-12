@@ -25,6 +25,7 @@ pub struct Config {
 pub struct ThemeConfig {
     pub background_rgba: Option<[u8; 4]>,
     pub blur_radius: Option<f32>,
+    pub accent_color_index: Option<usize>,
 }
 
 impl Default for ThemeConfig {
@@ -32,6 +33,7 @@ impl Default for ThemeConfig {
         ThemeConfig {
             background_rgba: Some([20, 20, 22, 200]),
             blur_radius: None,
+            accent_color_index: Some(0),
         }
     }
 }
@@ -42,6 +44,7 @@ impl ThemeConfig {
         Self {
             background_rgba: Some([20, 20, 22, 200]),
             blur_radius: None,
+            accent_color_index: Some(0),
         }
     }
 
@@ -50,6 +53,7 @@ impl ThemeConfig {
         Self {
             background_rgba: Some([240, 240, 245, 230]),
             blur_radius: None,
+            accent_color_index: Some(0),
         }
     }
 
@@ -76,6 +80,7 @@ impl Default for Config {
             theme: Some(ThemeConfig {
                 background_rgba: Some([20, 20, 22, 200]),
                 blur_radius: None,
+                accent_color_index: Some(0),
             }),
             start_with_windows: Some(false),
             enable_calculator: Some(true),
@@ -158,7 +163,9 @@ pub fn toggle_autostart(enable: bool) {
     if let Ok(run) = hkcu.open_subkey_with_flags(REGISTRY_RUN_KEY, KEY_SET_VALUE) {
         if enable {
             if let Ok(exe) = std::env::current_exe() {
-                let _ = run.set_value(APP_REGISTRY_NAME, &exe.to_string_lossy().to_string());
+                let path_str = exe.to_string_lossy();
+                let quoted_path = format!("\"{}\"", path_str);
+                let _ = run.set_value(APP_REGISTRY_NAME, &quoted_path);
             }
         } else {
             let _ = run.delete_value(APP_REGISTRY_NAME);

@@ -41,6 +41,7 @@ pub struct LauncherApp {
     index_receiver: Receiver<Vec<AppEntry>>,
     is_indexing: bool,
     is_dragging_mode: bool,
+    settings_tab: usize,
     tray_autostart_item: Option<tray_icon::menu::CheckMenuItem>,
 }
 
@@ -72,6 +73,7 @@ impl LauncherApp {
             index_receiver: rx,
             is_indexing: true,
             is_dragging_mode: false,
+            settings_tab: 0,
             launched_paths: std::collections::HashSet::new(),
             tray_autostart_item,
         }
@@ -281,179 +283,289 @@ impl eframe::App for LauncherApp {
                     let panel_fill = visuals.panel_fill;
                     ctx.set_visuals(visuals);
 
+                    let title_color = if is_dark { egui::Color32::from_rgb(255, 255, 255) } else { egui::Color32::from_rgb(0, 0, 0) };
+                    let desc_color = if is_dark { egui::Color32::from_gray(160) } else { egui::Color32::from_gray(120) };
+                    let accent_color_index = self.config.theme.as_ref().unwrap_or(&crate::core::config::ThemeConfig::default()).accent_color_index.unwrap_or(0).min(crate::constants::ACCENT_COLORS.len() - 1);
+                    let accent_color_val = if is_dark { crate::constants::ACCENT_COLORS[accent_color_index].0 } else { crate::constants::ACCENT_COLORS[accent_color_index].1 };
+                    let accent_color = egui::Color32::from_rgb(accent_color_val[0], accent_color_val[1], accent_color_val[2]);
+
+                    egui::SidePanel::left("settings_sidebar")
+                        .exact_width(180.0)
+                        .frame(egui::Frame::none().fill(if is_dark { egui::Color32::from_rgb(20, 20, 22) } else { egui::Color32::from_rgb(240, 240, 245) }))
+                        .show(ctx, |ui| {
+                            ui.add_space(24.0);
+                            ui.horizontal(|ui| {
+                                ui.add_space(16.0);
+                                ui.heading(egui::RichText::new("Glimpse").strong().size(20.0).color(title_color));
+                            });
+                            ui.add_space(24.0);
+
+                            let tabs = [
+                                ("Funcionalidades", egui_phosphor::regular::STAR),
+                                ("Aparência", egui_phosphor::regular::PALETTE),
+                                ("Posição", egui_phosphor::regular::MONITOR),
+                                ("Atalhos", egui_phosphor::regular::KEYBOARD),
+                            ];
+                            for (i, (tab_name, icon)) in tabs.iter().enumerate() {
+                                let is_selected = self.settings_tab == i;
+                                let fill = if is_selected {
+                                    if is_dark { egui::Color32::from_white_alpha(15) } else { egui::Color32::from_black_alpha(15) }
+                                } else {
+                                    egui::Color32::TRANSPARENT
+                                };
+                                let text_color = if is_selected { accent_color } else { desc_color };
+                                
+                                ui.horizontal(|ui| {
+                                    ui.add_space(12.0);
+                                    let (rect, response) = ui.allocate_exact_size(egui::vec2(156.0, 36.0), egui::Sense::click());
+                                    
+                                    if response.hovered() && !is_selected {
+                                        ui.painter().rect_filled(rect, 6.0, if is_dark { egui::Color32::from_white_alpha(5) } else { egui::Color32::from_black_alpha(5) });
+                                    } else if is_selected {
+                                        ui.painter().rect_filled(rect, 6.0, fill);
+                                        ui.painter().rect_filled(
+                                            egui::Rect::from_min_size(rect.min + egui::vec2(0.0, 8.0), egui::vec2(3.0, 20.0)),
+                                            1.5,
+                                            accent_color
+                                        );
+                                    }
+                                    
+                                    if response.clicked() {
+                                        self.settings_tab = i;
+                                    }
+                                    
+                                    let text_pos = rect.min + egui::vec2(12.0, 10.0);
+                                    ui.painter().text(
+                                        text_pos,
+                                        egui::Align2::LEFT_TOP,
+                                        *icon,
+                                        egui::FontId::proportional(16.0),
+                                        text_color,
+                                    );
+                                    ui.painter().text(
+                                        text_pos + egui::vec2(28.0, 1.0),
+                                        egui::Align2::LEFT_TOP,
+                                        *tab_name,
+                                        egui::FontId::proportional(14.0),
+                                        if is_selected { text_color } else { desc_color },
+                                    );
+                                });
+                                ui.add_space(4.0);
+                            }
+                        });
+
                     egui::CentralPanel::default()
                         .frame(egui::Frame::none().fill(panel_fill))
                         .show(ctx, |ui| {
-                        let title_color = if is_dark { egui::Color32::from_rgb(255, 255, 255) } else { egui::Color32::from_rgb(0, 0, 0) };
-                        let desc_color = if is_dark { egui::Color32::from_gray(160) } else { egui::Color32::from_gray(120) };
-
-                        egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
-                            ui.add_space(24.0);
-
-                            ui.horizontal(|ui| {
+                            egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
                                 ui.add_space(24.0);
-                                ui.heading(egui::RichText::new("Configurações").size(24.0).strong().color(title_color));
-                            });
+                                ui.horizontal(|ui| {
+                                    ui.add_space(24.0);
+                                    ui.vertical(|ui| {
+                                        ui.set_width(ui.available_width() - 24.0);
+                                        match self.settings_tab {
+                                            0 => {
+                                                ui.label(egui::RichText::new("Funcionalidades").size(20.0).strong().color(title_color));
+                                                ui.add_space(24.0);
 
-                            ui.add_space(24.0);
+                                                // Calc
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(egui_phosphor::regular::CALCULATOR).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Calculadora Embutida").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Avalia expressões matemáticas.").size(13.0).color(desc_color));
+                                                    });
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let mut val = self.config.enable_calculator.unwrap_or(true);
+                                                        if custom_switch(ui, &mut val).changed() { self.config.enable_calculator = Some(val); config_changed = true; }
+                                                    });
+                                                });
+                                                ui.add_space(16.0);
 
-                            ui.horizontal(|ui| {
-                                ui.add_space(24.0);
-                                ui.vertical(|ui| {
-                                    ui.set_width(ui.available_width() - 24.0);
+                                                // Web
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Pesquisa Rápida na Web").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Use 'g ' para pesquisar.").size(13.0).color(desc_color));
+                                                    });
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let mut val = self.config.enable_web_search.unwrap_or(true);
+                                                        if custom_switch(ui, &mut val).changed() { self.config.enable_web_search = Some(val); config_changed = true; }
+                                                    });
+                                                });
+                                                ui.add_space(16.0);
 
-                                    ui.label(egui::RichText::new("Funcionalidades").size(12.0).color(desc_color).strong());
-                                    ui.add_space(12.0);
+                                                // Terminal
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(egui_phosphor::regular::TERMINAL).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Comandos de Terminal").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Use '> ' para comandos.").size(13.0).color(desc_color));
+                                                    });
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let mut val = self.config.enable_commands.unwrap_or(true);
+                                                        if custom_switch(ui, &mut val).changed() { self.config.enable_commands = Some(val); config_changed = true; }
+                                                    });
+                                                });
+                                            },
+                                            1 => {
+                                                ui.label(egui::RichText::new("Aparência").size(20.0).strong().color(title_color));
+                                                ui.add_space(24.0);
 
-                                    // Item 1
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(egui_phosphor::regular::CALCULATOR).size(20.0).color(title_color));
-                                        ui.add_space(12.0);
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new("Calculadora Embutida").size(15.0).color(title_color));
-                                            ui.add_space(2.0);
-                                            ui.label(egui::RichText::new("Avalia expressões matemáticas (ex: 2+2) diretamente na busca.").size(13.0).color(desc_color));
-                                        });
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut calc_enabled = self.config.enable_calculator.unwrap_or(true);
-                                            if custom_switch(ui, &mut calc_enabled).changed() {
-                                                self.config.enable_calculator = Some(calc_enabled);
-                                                config_changed = true;
-                                            }
-                                        });
-                                    });
+                                                // Dark mode
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(if is_dark { egui_phosphor::regular::MOON } else { egui_phosphor::regular::SUN }).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Tema Escuro").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Alternar entre modo claro e escuro.").size(13.0).color(desc_color));
+                                                    });
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let mut dark_enabled = is_dark;
+                                                        if custom_switch(ui, &mut dark_enabled).changed() {
+                                                            let mut new_theme = if dark_enabled { crate::core::config::ThemeConfig::dark() } else { crate::core::config::ThemeConfig::light() };
+                                                            new_theme.accent_color_index = Some(accent_color_index);
+                                                            self.config.theme = Some(new_theme);
+                                                            config_changed = true;
+                                                        }
+                                                    });
+                                                });
+                                                ui.add_space(24.0);
 
-                                    ui.add_space(16.0);
+                                                // Accent colors
+                                                ui.label(egui::RichText::new("Cor de Destaque").size(15.0).color(title_color));
+                                                ui.add_space(12.0);
+                                                ui.horizontal_wrapped(|ui| {
+                                                    for (idx, colors) in crate::constants::ACCENT_COLORS.iter().enumerate() {
+                                                        let c = if is_dark { colors.0 } else { colors.1 };
+                                                        let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
+                                                        let is_selected = accent_color_index == idx;
+                                                        let (rect, response) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::click());
+                                                        if response.clicked() {
+                                                            let mut new_theme = self.config.theme.clone().unwrap_or_default();
+                                                            new_theme.accent_color_index = Some(idx);
+                                                            self.config.theme = Some(new_theme);
+                                                            config_changed = true;
+                                                        }
+                                                        if ui.is_rect_visible(rect) {
+                                                            ui.painter().circle_filled(rect.center(), 12.0, color);
+                                                            if is_selected {
+                                                                ui.painter().circle_stroke(rect.center(), 15.0, egui::Stroke::new(2.0, color));
+                                                            }
+                                                        }
+                                                        ui.add_space(8.0);
+                                                    }
+                                                });
+                                            },
+                                            2 => {
+                                                ui.label(egui::RichText::new("Posição da Janela").size(20.0).strong().color(title_color));
+                                                ui.add_space(24.0);
+                                                ui.label(egui::RichText::new("Selecione onde o launcher deve aparecer:").size(15.0).color(title_color));
+                                                ui.add_space(16.0);
 
-                                    // Item 2
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(egui_phosphor::regular::GLOBE).size(20.0).color(title_color));
-                                        ui.add_space(12.0);
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new("Pesquisa Rápida na Web").size(15.0).color(title_color));
-                                            ui.add_space(2.0);
-                                            ui.label(egui::RichText::new("Busque no Google digitando 'g ' seguido do termo desejado.").size(13.0).color(desc_color));
-                                        });
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut web_enabled = self.config.enable_web_search.unwrap_or(true);
-                                            if custom_switch(ui, &mut web_enabled).changed() {
-                                                self.config.enable_web_search = Some(web_enabled);
-                                                config_changed = true;
-                                            }
-                                        });
-                                    });
-
-                                    ui.add_space(16.0);
-
-                                    // Item 3
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(egui_phosphor::regular::TERMINAL).size(20.0).color(title_color));
-                                        ui.add_space(12.0);
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new("Comandos de Terminal").size(15.0).color(title_color));
-                                            ui.add_space(2.0);
-                                            ui.label(egui::RichText::new("Rode comandos de prompt digitando '> '.").size(13.0).color(desc_color));
-                                        });
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut cmd_enabled = self.config.enable_commands.unwrap_or(true);
-                                            if custom_switch(ui, &mut cmd_enabled).changed() {
-                                                self.config.enable_commands = Some(cmd_enabled);
-                                                config_changed = true;
-                                            }
-                                        });
-                                    });
-
-                                    ui.add_space(32.0);
-                                    ui.label(egui::RichText::new("Posição da Janela").size(12.0).color(desc_color).strong());
-                                    ui.add_space(12.0);
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new("Posição pré-definida:").color(title_color));
-                                        if ui.button("Mover").clicked() {
-                                            self.is_dragging_mode = true;
-                                            self.show_settings.store(false, Ordering::SeqCst);
-                                            self.is_visible.store(true, Ordering::SeqCst);
-                                        }
-                                        if ui.button("Centro").clicked() {
-                                            self.config.position_x = Some(0.5);
-                                            self.config.position_y = Some(0.25);
-                                            config_changed = true;
-                                        }
-                                        if ui.button("Superior direito").clicked() {
-                                            self.config.position_x = Some(0.9);
-                                            self.config.position_y = Some(0.1);
-                                            config_changed = true;
-                                        }
-                                        if ui.button("Superior esquerdo").clicked() {
-                                            self.config.position_x = Some(0.1);
-                                            self.config.position_y = Some(0.1);
-                                            config_changed = true;
-                                        }
-                                        if ui.button("Inferior direito").clicked() {
-                                            self.config.position_x = Some(0.98);
-                                            self.config.position_y = Some(0.65);
-                                            config_changed = true;
-                                        }
-                                        if ui.button("Inferior esquerdo").clicked() {
-                                            self.config.position_x = Some(0.02);
-                                            self.config.position_y = Some(0.65);
-                                            config_changed = true;
-                                        }
-                                    });
-
-                                    ui.add_space(32.0);
-                                    ui.label(egui::RichText::new("Sistema").size(12.0).color(desc_color).strong());
-                                    ui.add_space(12.0);
-
-                                    // Tema Claro/Escuro
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(if is_dark { egui_phosphor::regular::MOON } else { egui_phosphor::regular::SUN }).size(20.0).color(title_color));
-                                        ui.add_space(12.0);
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new("Tema Escuro").size(15.0).color(title_color));
-                                            ui.add_space(2.0);
-                                            ui.label(egui::RichText::new("Alterna entre o modo claro e escuro.").size(13.0).color(desc_color));
-                                        });
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut dark_enabled = is_dark;
-                                            if custom_switch(ui, &mut dark_enabled).changed() {
-                                                let new_theme = if dark_enabled {
-                                                    crate::core::config::ThemeConfig::dark()
-                                                } else {
-                                                    crate::core::config::ThemeConfig::light()
-                                                };
-                                                self.config.theme = Some(new_theme);
-                                                config_changed = true;
-                                            }
-                                        });
-                                    });
-
-                                    ui.add_space(16.0);
-
-                                    // Iniciar com Windows
-                                    ui.horizontal(|ui| {
-                                        ui.label(egui::RichText::new(egui_phosphor::regular::WINDOWS_LOGO).size(20.0).color(title_color));
-                                        ui.add_space(12.0);
-                                        ui.vertical(|ui| {
-                                            ui.label(egui::RichText::new("Iniciar com o Windows").size(15.0).color(title_color));
-                                            ui.add_space(2.0);
-                                            ui.label(egui::RichText::new("Abre o Glimpse automaticamente ao ligar o PC.").size(13.0).color(desc_color));
-                                        });
-                                        ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                                            let mut auto_start = self.config.start_with_windows.unwrap_or(false);
-                                            if custom_switch(ui, &mut auto_start).changed() {
-                                                crate::core::config::toggle_autostart(auto_start);
-                                                self.config.start_with_windows = Some(auto_start);
-                                                config_changed = true;
-                                                if let Some(tray_item) = &self.tray_autostart_item {
-                                                    tray_item.set_checked(auto_start);
+                                                let grid_size = 200.0;
+                                                let cell_size = grid_size / 3.0;
+                                                let (rect, response) = ui.allocate_exact_size(egui::vec2(grid_size, grid_size), egui::Sense::click());
+                                                if ui.is_rect_visible(rect) {
+                                                    let bg_color = if is_dark { egui::Color32::from_gray(40) } else { egui::Color32::from_gray(200) };
+                                                    ui.painter().rect_filled(rect, 8.0, bg_color);
+                                                    for row in 0..3 {
+                                                        for col in 0..3 {
+                                                            let cell_rect = egui::Rect::from_min_size(
+                                                                rect.min + egui::vec2(col as f32 * cell_size, row as f32 * cell_size),
+                                                                egui::vec2(cell_size, cell_size),
+                                                            );
+                                                            let (target_px, target_py) = match (row, col) {
+                                                                (0, 0) => (0.1, 0.1),
+                                                                (0, 1) => (0.5, 0.1),
+                                                                (0, 2) => (0.9, 0.1),
+                                                                (1, 0) => (0.02, 0.25),
+                                                                (1, 1) => (0.5, 0.25),
+                                                                (1, 2) => (0.98, 0.25),
+                                                                (2, 0) => (0.02, 0.65),
+                                                                (2, 1) => (0.5, 0.65),
+                                                                (2, 2) => (0.98, 0.65),
+                                                                _ => (0.5, 0.25),
+                                                            };
+                                                            if response.clicked() && cell_rect.contains(response.interact_pointer_pos().unwrap_or(egui::Pos2::ZERO)) {
+                                                                self.config.position_x = Some(target_px);
+                                                                self.config.position_y = Some(target_py);
+                                                                config_changed = true;
+                                                            }
+                                                            let current_px = self.config.position_x.unwrap_or(0.5);
+                                                            let current_py = self.config.position_y.unwrap_or(0.25);
+                                                            let is_active = (current_px - target_px).abs() < 0.001 && (current_py - target_py).abs() < 0.001;
+                                                            if is_active {
+                                                                ui.painter().rect_filled(cell_rect.shrink(4.0), 6.0, accent_color);
+                                                            } else {
+                                                                let fill = if is_dark { egui::Color32::from_gray(60) } else { egui::Color32::from_gray(180) };
+                                                                ui.painter().rect_filled(cell_rect.shrink(4.0), 6.0, fill);
+                                                            }
+                                                        }
+                                                    }
                                                 }
-                                            }
-                                        });
+
+                                                ui.add_space(24.0);
+                                                if ui.button("Mover livremente na tela").clicked() {
+                                                    self.is_dragging_mode = true;
+                                                    self.show_settings.store(false, std::sync::atomic::Ordering::SeqCst);
+                                                    self.is_visible.store(true, std::sync::atomic::Ordering::SeqCst);
+                                                }
+                                            },
+                                            3 => {
+                                                ui.label(egui::RichText::new("Atalhos do Sistema").size(20.0).strong().color(title_color));
+                                                ui.add_space(24.0);
+                                                
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(egui_phosphor::regular::KEYBOARD).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Atalho Global (Abrir Launcher)").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Edite config.toml ou digite aqui.").size(13.0).color(desc_color));
+                                                    });
+                                                });
+                                                ui.add_space(12.0);
+                                                let mut hk = self.config.hotkey.clone().unwrap_or("Alt+S".to_string());
+                                                ui.horizontal(|ui| {
+                                                    if ui.text_edit_singleline(&mut hk).changed() {
+                                                        self.config.hotkey = Some(hk);
+                                                        config_changed = true;
+                                                    }
+                                                    ui.label(egui::RichText::new("(Requer reinício do app)").size(12.0).color(desc_color));
+                                                });
+
+                                                ui.add_space(24.0);
+
+                                                ui.horizontal(|ui| {
+                                                    ui.label(egui::RichText::new(egui_phosphor::regular::WINDOWS_LOGO).size(20.0).color(title_color));
+                                                    ui.add_space(12.0);
+                                                    ui.vertical(|ui| {
+                                                        ui.label(egui::RichText::new("Iniciar com o Windows").size(15.0).color(title_color));
+                                                        ui.label(egui::RichText::new("Abre o Glimpse automaticamente.").size(13.0).color(desc_color));
+                                                    });
+                                                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                                                        let mut auto_start = self.config.start_with_windows.unwrap_or(false);
+                                                        if custom_switch(ui, &mut auto_start).changed() {
+                                                            crate::core::config::toggle_autostart(auto_start);
+                                                            self.config.start_with_windows = Some(auto_start);
+                                                            config_changed = true;
+                                                            if let Some(tray_item) = &self.tray_autostart_item {
+                                                                tray_item.set_checked(auto_start);
+                                                            }
+                                                        }
+                                                    });
+                                                });
+                                            },
+                                            _ => {}
+                                        }
                                     });
-                                }); // Close ui.vertical
-                            }); // Close ui.horizontal
-                        }); // Close ScrollArea
-                    }); // Close CentralPanel
+                                });
+                            });
+                        });
 
                     if config_changed {
                         let _ = crate::core::config::save(&self.config);
@@ -475,7 +587,7 @@ impl eframe::App for LauncherApp {
         }
         if !self.filtered.is_empty() {
             target_height += 8.0;
-            let items_to_show = self.filtered.len().min(3) as f32; // Show up to 3 items initially
+            let items_to_show = self.filtered.len().min(4) as f32; // Show up to 4 items initially
             target_height += items_to_show * 36.0;
             target_height += 4.0;
         }
@@ -489,13 +601,23 @@ impl eframe::App for LauncherApp {
         }
         let theme = self.config.theme.clone().unwrap_or_default();
         let is_dark = theme.is_dark();
-        let bg = theme.background_rgba.unwrap_or([20, 20, 22, 200]);
+        let bg = if is_dark {
+            [15, 15, 15, 242] // Preto fosco com 95% de opacidade
+        } else {
+            let mut l_bg = theme.background_rgba.unwrap_or([245, 245, 250, 255]);
+            l_bg[3] = 242;
+            l_bg
+        };
 
+        let accent_color_index = theme
+            .accent_color_index
+            .unwrap_or(0)
+            .min(crate::constants::ACCENT_COLORS.len() - 1);
         let accent_color = if is_dark {
-            let c = crate::constants::ACCENT_COLOR_DARK;
+            let c = crate::constants::ACCENT_COLORS[accent_color_index].0;
             egui::Color32::from_rgb(c[0], c[1], c[2])
         } else {
-            let c = crate::constants::ACCENT_COLOR_LIGHT;
+            let c = crate::constants::ACCENT_COLORS[accent_color_index].1;
             egui::Color32::from_rgb(c[0], c[1], c[2])
         };
 
@@ -537,12 +659,7 @@ impl eframe::App for LauncherApp {
         };
 
         let frame_style = egui::Frame {
-            fill: egui::Color32::from_rgba_unmultiplied(
-                bg[0],
-                bg[1],
-                bg[2],
-                (bg[3] as f32 * 0.8) as u8,
-            ),
+            fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
             rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
             stroke: egui::Stroke::new(1.0, frame_stroke),
             inner_margin: egui::Margin {
@@ -793,7 +910,7 @@ impl eframe::App for LauncherApp {
                                             } else {
                                                 egui_phosphor::regular::APP_WINDOW
                                             };
-                                            ui.label(egui::RichText::new(icon).size(18.0));
+                                            ui.label(egui::RichText::new(icon).size(26.0));
                                         }
 
                                         ui.add_space(12.0);

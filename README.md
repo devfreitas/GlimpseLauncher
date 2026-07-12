@@ -5,7 +5,7 @@
 [![Rust](https://img.shields.io/badge/Rust-CE412B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
 [![Performance](https://img.shields.io/badge/Performance-Ultraleve-FF4500?style=for-the-badge&logo=rocket&logoColor=white)]()
 [![Windows 11](https://img.shields.io/badge/Windows_11-E3371E?style=for-the-badge&logo=windows11&logoColor=white)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/Versão-0.6.0-B7410E?style=for-the-badge)](https://github.com/devfreiatas/GlimpseLauncher/releases)
+[![Version](https://img.shields.io/badge/Versão-0.8.0-B7410E?style=for-the-badge)](https://github.com/devfreitas/GlimpseLauncher/releases)
 
 
 **Um lançador de buscas para desktop ultraleve e minimalista, focado em performance absoluta, design moderno e baixo consumo de recursos para Windows 11.**
@@ -57,10 +57,11 @@ O Glimpse Launcher oferece um conjunto robusto de ferramentas e otimizações pr
 
 ### Interface de Usuário Moderna e Intuitiva
 
-- **Temas Claro e Escuro** — Transição instantânea de layout, seguindo a preferência do seu sistema com paletas de cores refinadas.
-- **Fluent Design do Windows 11** — Integração total com cantos arredondados modernos, sombras sutis dinâmicas e animações suaves.
-- **Resultados Detalhados** — Exibe título, subtítulo (caminhos e dicas) e tags visuais (`EXE`, `APP`, `FILE`) para rápida identificação.
-- **Posicionamento arrastável** — Clique e arraste a janela do launcher para onde quiser.
+- **Temas e Cores de Destaque** — Transição instantânea entre Claro e Escuro, com suporte a paletas customizáveis de Cores de Destaque (Accent Colors).
+- **Fluent Design do Windows 11** — Integração total com cantos arredondados, fundo fosco translúcido e animações suaves.
+- **Painel de Configurações** — Sidebar de fácil navegação para controlar recursos, atalho global, aparência e mais.
+- **Posicionamento Customizável** — Use um Grid 3x3 interativo para afixar a janela exatamente onde deseja, ou ative o movimento livre arrastável.
+- **Resultados Detalhados** — Exibe título, subtítulo (caminhos e dicas) e tags visuais (`EXE`, `APP`, `FILE`) em uma lista refinada.
 
 ### Eficiência e Sistema
 
@@ -106,7 +107,7 @@ O **Glimpse Launcher** funciona com atalhos e prefixos simples para agilizar sua
 
 | Atalho | Ação |
 |:---|:---|
-| `Alt + S` | Alternar a visibilidade do launcher |
+| `Alt + S` (Customizável)| Alternar a visibilidade do launcher |
 | `↑` `↓` | Navegar pelos resultados |
 | `Enter` | Iniciar o aplicativo selecionado / executar comando |
 | `Escape` | Ocultar o launcher |
@@ -202,7 +203,9 @@ glimpse_launcher/
 | [`mimalloc`](https://crates.io/crates/mimalloc) | Alocador de memória de alto desempenho da Microsoft |
 | [`serde`](https://crates.io/crates/serde) / [`toml`](https://crates.io/crates/toml) | Serialização e desserialização de configurações |
 | [`egui-phosphor`](https://crates.io/crates/egui-phosphor) | Conjunto de ícones Phosphor para a UI |
-| [`anyhow`](https://crates.io/crates/anyhow) / [`thiserror`](https://crates.io/crates/thiserror) | Tratamento de erros ergonômico |
+| [`webbrowser`](https://crates.io/crates/webbrowser) / [`urlencoding`](https://crates.io/crates/urlencoding) | Abertura de links de pesquisa na web |
+| [`winreg`](https://crates.io/crates/winreg) | Acesso ao registro do Windows (ex: iniciar com Windows) |
+| [`walkdir`](https://crates.io/crates/walkdir) / [`dirs`](https://crates.io/crates/dirs) | Busca em diretórios e caminhos padrão do sistema |
 
 <br />
 

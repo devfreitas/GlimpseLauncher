@@ -10,12 +10,18 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
         return Vec::new();
     }
 
-    let mut matcher = Matcher::new(Config::DEFAULT.match_paths());
+    thread_local! {
+        static MATCHER: std::cell::RefCell<Matcher> = std::cell::RefCell::new(Matcher::new(Config::DEFAULT.match_paths()));
+    }
+
     let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
 
     // Index already filters out blacklisted apps during build_index,
     // so we can directly match on the index to save huge amounts of CPU.
-    let matches = pattern.match_list(index, &mut matcher);
+    let matches = MATCHER.with(|m| {
+        let mut matcher = m.borrow_mut();
+        pattern.match_list(index, &mut *matcher)
+    });
 
     let mut results: Vec<(i64, &AppEntry)> = matches
         .into_iter()
@@ -42,7 +48,7 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
 
     results
         .into_iter()
-        .take(10)
+        .take(4)
         .map(|(_, app)| app.clone())
         .collect()
 }

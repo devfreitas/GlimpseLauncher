@@ -147,5 +147,11 @@ pub const DOCS_TERMS: &[&str] = &[
     "faq",
 ];
 
-pub const ACCENT_COLOR_LIGHT: [u8; 3] = [91, 127, 219]; // #5B7FDB
-pub const ACCENT_COLOR_DARK: [u8; 3] = [123, 154, 237]; // #7B9AED
+// (Dark Mode Color, Light Mode Color)
+pub const ACCENT_COLORS: &[([u8; 3], [u8; 3])] = &[
+    ([195, 177, 225], [150, 111, 214]), // Purple
+    ([123, 154, 237], [91, 127, 219]),  // Blue
+    ([144, 238, 144], [34, 139, 34]),   // Green
+    ([255, 182, 193], [255, 105, 180]), // Pink
+    ([255, 218, 185], [255, 140, 0]),   // Orange
+];
