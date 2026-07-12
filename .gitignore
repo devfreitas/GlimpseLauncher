@@ -25,7 +25,7 @@ Desktop.ini
 *.bak
 *.log
 
-# Installer output (binaries should not be in VCS)
+# Installer output
 installer/
 
 .agents/

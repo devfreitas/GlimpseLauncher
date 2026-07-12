@@ -16,8 +16,6 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
 
     let pattern = Pattern::parse(query, CaseMatching::Ignore, Normalization::Smart);
 
-    // Index already filters out blacklisted apps during build_index,
-    // so we can directly match on the index to save huge amounts of CPU.
     let matches = MATCHER.with(|m| {
         let mut matcher = m.borrow_mut();
         pattern.match_list(index, &mut *matcher)

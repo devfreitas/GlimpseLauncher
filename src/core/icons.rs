@@ -76,7 +76,6 @@ impl IconManager {
         }
         drop(cache);
 
-        // Check disk cache next
         let disk_cache = self.disk_cache.lock().unwrap();
         if let Some(persisted) = disk_cache.get(path) {
             let image = ColorImage::from_rgba_unmultiplied(
@@ -96,9 +95,7 @@ impl IconManager {
         }
         drop(disk_cache);
 
-        // Extract native icon if not in cache
         if let Some(image) = extract_icon_image(path) {
-            // Add to disk cache
             let persisted = PersistedIcon {
                 width: image.size[0],
                 height: image.size[1],
@@ -134,7 +131,6 @@ pub static ICON_MANAGER: Lazy<IconManager> = Lazy::new(IconManager::new);
 
 fn extract_icon_image(path: &str) -> Option<ColorImage> {
     if let Some(aumid) = path.strip_prefix("UWP:") {
-        // Handle UWP icon via IShellItemImageFactory
         use windows::core::ComInterface;
         use windows::Win32::System::Com::{CoInitializeEx, COINIT_MULTITHREADED};
         use windows::Win32::UI::Shell::{IShellItemImageFactory, SHParseDisplayName};
@@ -144,14 +140,12 @@ fn extract_icon_image(path: &str) -> Option<ColorImage> {
             let shell_path = HSTRING::from(format!("shell:appsFolder\\{}", aumid));
             let mut pidl = std::ptr::null_mut();
             if SHParseDisplayName(&shell_path, None, &mut pidl, 0, None).is_ok() {
-                // We need SHCreateItemFromIDList to get IShellItem, or SHBindToObject
                 use windows::Win32::UI::Shell::SHCreateItemFromIDList;
                 if let Ok(item) =
                     SHCreateItemFromIDList::<windows::Win32::UI::Shell::IShellItem>(pidl)
                 {
                     if let Ok(factory) = item.cast::<IShellItemImageFactory>() {
                         let size = windows::Win32::Foundation::SIZE { cx: 32, cy: 32 };
-                        // SIIGBF_RESIZETOFIT = 0x00000000
                         if let Ok(hbitmap) =
                             factory.GetImage(size, windows::Win32::UI::Shell::SIIGBF_RESIZETOFIT)
                         {
@@ -169,7 +163,6 @@ fn extract_icon_image(path: &str) -> Option<ColorImage> {
         return None;
     }
 
-    // For normal files/exes, use ExtractIconExW
     let path_hstr = HSTRING::from(path);
     let mut icon_large: [HICON; 1] = [HICON::default(); 1];
 
@@ -195,7 +188,6 @@ unsafe fn hicon_to_color_image(hicon: HICON) -> Option<ColorImage> {
 
     let result = hbitmap_to_color_image(info.hbmColor);
 
-    // GetIconInfo creates bitmaps that the caller must delete
     if !info.hbmColor.is_invalid() {
         DeleteObject(info.hbmColor);
     }
@@ -231,7 +223,7 @@ unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
     let mut bmi: BITMAPINFO = std::mem::zeroed();
     bmi.bmiHeader.biSize = std::mem::size_of::<BITMAPINFOHEADER>() as u32;
     bmi.bmiHeader.biWidth = width;
-    bmi.bmiHeader.biHeight = -height; // Top-down
+    bmi.bmiHeader.biHeight = -height;
     bmi.bmiHeader.biPlanes = 1;
     bmi.bmiHeader.biBitCount = 32;
     bmi.bmiHeader.biCompression = BI_RGB.0;
@@ -252,7 +244,6 @@ unsafe fn hbitmap_to_color_image(hbm: HBITMAP) -> Option<ColorImage> {
         return None;
     }
 
-    // Convert BGRA to RGBA
     let mut rgba_pixels = Vec::with_capacity((width * height * 4) as usize);
     for &p in &pixels {
         let a = ((p >> 24) & 0xFF) as u8;

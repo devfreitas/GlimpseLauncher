@@ -9,7 +9,6 @@ const APP_REGISTRY_NAME: &str = "GlimpseLauncher";
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
-    /// Hot‑key "Alt+S".
     pub hotkey: Option<String>,
     pub start_with_windows: Option<bool>,
     pub icon_path: Option<String>,
@@ -39,7 +38,6 @@ impl Default for ThemeConfig {
 }
 
 impl ThemeConfig {
-    /// Creates the default dark theme.
     pub fn dark() -> Self {
         Self {
             background_rgba: Some([20, 20, 22, 200]),
@@ -48,7 +46,6 @@ impl ThemeConfig {
         }
     }
 
-    /// Creates the default light theme.
     pub fn light() -> Self {
         Self {
             background_rgba: Some([240, 240, 245, 230]),
@@ -57,12 +54,10 @@ impl ThemeConfig {
         }
     }
 
-    /// Returns `true` if this theme is considered dark.
     pub fn is_dark(&self) -> bool {
         self.background_rgba.map_or(true, |rgba| rgba[0] < 100)
     }
 
-    /// Returns the opposite theme (dark ↔ light).
     pub fn toggle(&self) -> Self {
         if self.is_dark() {
             Self::light()

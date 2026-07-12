@@ -81,7 +81,6 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
         if success.is_ok() && size > 0 {
             let exe_path = String::from_utf16_lossy(&buffer[..size as usize]);
 
-            // Compare full paths
             if exe_path.eq_ignore_ascii_case(&state.target_path) {
                 ShowWindow(hwnd, SW_RESTORE);
                 SetForegroundWindow(hwnd);
@@ -89,7 +88,6 @@ unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> BOOL 
                 return BOOL(0);
             }
 
-            // Fallback: If target path has no path (just exe name) or we want to match by stem
             let exe_stem = Path::new(&exe_path)
                 .file_stem()
                 .and_then(|s| s.to_str())

@@ -1,5 +1,3 @@
-/// Blacklisted executable name substrings. Entries containing any of these terms
-/// (case-insensitive) are excluded from search results.
 pub const BLACKLIST: &[&str] = &[
     "unins",
     "uninstall",
@@ -101,8 +99,6 @@ pub const BLACKLIST: &[&str] = &[
     "settings",
 ];
 
-/// Blacklisted directory name substrings. Directories matching these terms
-/// are skipped entirely during filesystem scanning.
 pub const DIR_BLACKLIST: &[&str] = &[
     "node_modules",
     "target",
@@ -133,8 +129,6 @@ pub const DIR_BLACKLIST: &[&str] = &[
     "appdata\\local\\packages",
 ];
 
-/// Terms that indicate documentation or non-executable content.
-/// Entries matching these are deprioritized in search results.
 pub const DOCS_TERMS: &[&str] = &[
     "documentation",
     "help",
@@ -147,7 +141,6 @@ pub const DOCS_TERMS: &[&str] = &[
     "faq",
 ];
 
-// (Dark Mode Color, Light Mode Color)
 pub const ACCENT_COLORS: &[([u8; 3], [u8; 3])] = &[
     ([195, 177, 225], [150, 111, 214]), // Purple
     ([123, 154, 237], [91, 127, 219]),  // Blue
