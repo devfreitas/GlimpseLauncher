@@ -1,6 +1,6 @@
 [package]
 name = "glimpse_launcher"
-version = "0.8.0"
+version = "0.8.1"
 edition = "2021"
 description = "An ultralight, blazing-fast desktop launcher for Windows 11"
 repository = "https://github.com/devfreitas/GlimpseLauncher"
