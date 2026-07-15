@@ -45,14 +45,12 @@ pub struct LauncherApp {
     is_indexing: bool,
     is_dragging_mode: bool,
     settings_tab: usize,
-    tray_autostart_item: Option<tray_icon::menu::CheckMenuItem>,
 }
 
 impl LauncherApp {
     pub fn new(
         is_visible: Arc<AtomicBool>,
         show_settings: Arc<AtomicBool>,
-        tray_autostart_item: Option<tray_icon::menu::CheckMenuItem>,
     ) -> Self {
         let (tx, rx) = crossbeam_channel::unbounded();
 
@@ -78,7 +76,6 @@ impl LauncherApp {
             is_dragging_mode: false,
             settings_tab: 0,
             launched_paths: std::collections::HashSet::new(),
-            tray_autostart_item,
         }
     }
 
@@ -270,7 +267,7 @@ impl eframe::App for LauncherApp {
                     .with_title("Configurações - Glimpse")
                     .with_icon(APP_ICON.clone())
                     .with_transparent(true) // For Mica/Acrylic effect if possible
-                    .with_inner_size([950.0, 700.0]),
+                    .with_inner_size([1050.0, 750.0]),
                 |ctx, class| {
                     if class == egui::ViewportClass::Deferred {
                         return;
@@ -285,7 +282,6 @@ impl eframe::App for LauncherApp {
                     } else {
                         egui::Visuals::light()
                     };
-                    // Use translucent background to simulate Acrylic/Mica
                     let panel_fill = if is_dark { egui::Color32::from_rgba_unmultiplied(18, 18, 22, 250) } else { egui::Color32::from_rgba_unmultiplied(240, 240, 245, 250) };
                     ctx.set_visuals(visuals);
 
@@ -331,7 +327,6 @@ impl eframe::App for LauncherApp {
                         .exact_width(200.0)
                         .frame(egui::Frame::none().fill(if is_dark { egui::Color32::TRANSPARENT } else { egui::Color32::from_rgb(235, 235, 240) }))
                         .show(ctx, |ui| {
-                            // Separator line
                             let rect = ui.max_rect();
                             let sep_color = if is_dark { egui::Color32::from_rgba_unmultiplied(255, 255, 255, 10) } else { egui::Color32::from_rgba_unmultiplied(0, 0, 0, 10) };
                             ui.painter().vline(rect.right(), rect.y_range(), egui::Stroke::new(1.0, sep_color));
@@ -339,7 +334,6 @@ impl eframe::App for LauncherApp {
                             ui.add_space(32.0);
                             ui.horizontal(|ui| {
                                 ui.add_space(20.0);
-                                // Glimpse Logo
                                 let (icon_rect, _) = ui.allocate_exact_size(egui::vec2(28.0, 28.0), egui::Sense::hover());
                                 ui.painter().rect_filled(icon_rect, 6.0, accent_color.linear_multiply(0.2));
                                 ui.painter().text(
@@ -681,7 +675,6 @@ impl eframe::App for LauncherApp {
                                                 card!(ui, |ui| {
                                                     ui.vertical(|ui| {
                                                         ui.add_space(16.0);
-                                                        // Monitor representation
                                                         let monitor_width = 280.0;
                                                         let monitor_height = 160.0;
                                                         ui.horizontal(|ui| {
@@ -695,14 +688,12 @@ impl eframe::App for LauncherApp {
                                                                 ui.painter().rect_filled(rect, 8.0, monitor_bg);
                                                                 ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(2.0, monitor_stroke));
                                                                 
-                                                                // Stand
                                                                 let stand_rect = egui::Rect::from_min_size(rect.center_bottom() - egui::vec2(25.0, 0.0), egui::vec2(50.0, 25.0));
                                                                 ui.painter().rect_filled(stand_rect, 0.0, monitor_stroke);
                                                                 ui.painter().rect_filled(egui::Rect::from_min_size(stand_rect.center_bottom() - egui::vec2(40.0, 0.0), egui::vec2(80.0, 6.0)), 3.0, monitor_stroke);
                                                                 
                                                                 let inner_rect = rect.shrink(6.0);
                                                                 
-                                                                // Draw grid zones
                                                                 for row in 0..3 {
                                                                     for col in 0..3 {
                                                                         let cell_w = inner_rect.width() / 3.0;
@@ -825,53 +816,7 @@ impl eframe::App for LauncherApp {
                                                 ui.label(egui::RichText::new("Configure atalhos e comportamento do sistema.").size(14.0).color(desc_color));
                                                 ui.add_space(24.0);
                                                 
-                                                card!(ui, |ui| {
-                                                    ui.horizontal(|ui| {
-                                                        icon_box!(ui, egui_phosphor::regular::KEYBOARD, title_color);
-                                                        ui.add_space(16.0);
-                                                        ui.vertical(|ui| {
-                                                            ui.label(egui::RichText::new("Atalho Global (Abrir Launcher)").size(15.0).strong().color(title_color));
-                                                            ui.add_space(2.0);
-                                                            ui.label(egui::RichText::new("Pressione a combinação para abrir o Glimpse.").size(13.0).color(desc_color));
-                                                            ui.add_space(12.0);
-                                                            let mut hk = self.config.hotkey.clone().unwrap_or("Alt+S".to_string());
-                                                            ui.horizontal(|ui| {
-                                                                let text_bg = if is_dark { egui::Color32::from_rgba_unmultiplied(20, 20, 25, 255) } else { egui::Color32::from_gray(240) };
-                                                                let stroke = if is_dark { egui::Color32::from_rgba_unmultiplied(60, 60, 70, 255) } else { egui::Color32::from_gray(200) };
-                                                                
-                                                                ui.style_mut().visuals.extreme_bg_color = text_bg;
-                                                                ui.style_mut().visuals.widgets.inactive.bg_stroke = egui::Stroke::new(1.0, stroke);
-                                                                ui.style_mut().visuals.widgets.hovered.bg_stroke = egui::Stroke::new(1.0, accent_color);
-                                                                ui.style_mut().visuals.widgets.active.bg_stroke = egui::Stroke::new(2.0, accent_color);
-                                                                ui.style_mut().visuals.widgets.inactive.rounding = egui::Rounding::same(6.0);
-                                                                ui.style_mut().visuals.widgets.hovered.rounding = egui::Rounding::same(6.0);
-                                                                ui.style_mut().visuals.widgets.active.rounding = egui::Rounding::same(6.0);
-                                                                ui.style_mut().visuals.selection.stroke.color = accent_color;
-                                                                
-                                                                let resp = ui.add(
-                                                                    egui::TextEdit::singleline(&mut hk)
-                                                                        .desired_width(140.0)
-                                                                        .font(egui::FontId::proportional(16.0))
-                                                                        .horizontal_align(egui::Align::Center)
-                                                                        .margin(egui::vec2(8.0, 8.0))
-                                                                );
-                                                                if resp.changed() {
-                                                                    self.config.hotkey = Some(hk);
-                                                                    config_changed = true;
-                                                                }
-                                                                
-                                                                ui.add_space(8.0);
-                                                                if resp.has_focus() {
-                                                                    ui.label(egui::RichText::new("Pressione Enter").size(12.0).color(accent_color));
-                                                                } else {
-                                                                    ui.label(egui::RichText::new(egui_phosphor::regular::PENCIL_SIMPLE).color(desc_color));
-                                                                }
-                                                            });
-                                                            ui.add_space(8.0);
-                                                            ui.label(egui::RichText::new("Requer reinício do aplicativo para aplicar.").size(12.0).color(desc_color.linear_multiply(0.8)));
-                                                        });
-                                                    });
-                                                });
+
                                                 ui.add_space(12.0);
 
                                                 ui.horizontal(|ui| {
@@ -892,9 +837,6 @@ impl eframe::App for LauncherApp {
                                                                         crate::core::config::toggle_autostart(auto_start);
                                                                         self.config.start_with_windows = Some(auto_start);
                                                                         config_changed = true;
-                                                                        if let Some(tray_item) = &self.tray_autostart_item {
-                                                                            tray_item.set_checked(auto_start);
-                                                                        }
                                                                     }
                                                                 });
                                                             });
@@ -945,7 +887,7 @@ impl eframe::App for LauncherApp {
                         self.show_settings.store(false, Ordering::SeqCst);
                     }
                 }
-            ); // End show_viewport_immediate call
+            ); 
         }
 
         if !current_visibility {
@@ -958,7 +900,7 @@ impl eframe::App for LauncherApp {
         }
         if !self.filtered.is_empty() {
             target_height += 8.0;
-            let items_to_show = self.filtered.len().min(4) as f32; // Show up to 4 items initially
+            let items_to_show = self.filtered.len().min(4) as f32;
             target_height += items_to_show * 36.0;
             target_height += 4.0;
         }
@@ -973,7 +915,7 @@ impl eframe::App for LauncherApp {
         let theme = self.config.theme.as_ref().unwrap_or(&DEFAULT_THEME);
         let is_dark = theme.is_dark();
         let bg = if is_dark {
-            [15, 15, 15, 242] // Preto fosco com 95% de opacidade
+            [15, 15, 15, 242] 
         } else {
             let mut l_bg = theme.background_rgba.unwrap_or([245, 245, 250, 255]);
             l_bg[3] = 242;
@@ -994,7 +936,6 @@ impl eframe::App for LauncherApp {
 
         let mut visuals = ctx.style().visuals.clone();
 
-        // Ensure the OS window background is completely transparent so only our rounded frame is visible.
         visuals.window_fill = egui::Color32::TRANSPARENT;
         visuals.panel_fill = egui::Color32::TRANSPARENT;
 
@@ -1027,7 +968,7 @@ impl eframe::App for LauncherApp {
 
         let frame_style = egui::Frame {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
-            rounding: egui::Rounding::same(16.0), // increased from 8.0 to 16.0 for modern look
+            rounding: egui::Rounding::same(16.0),
             stroke: egui::Stroke::new(1.0, frame_stroke),
             inner_margin: egui::Margin {
                 left: 3.0,
@@ -1387,17 +1328,15 @@ impl eframe::App for LauncherApp {
                                     let item_height = response.response.rect.height();
                                     let pill_height = 24.0; 
                                     let mut pill_rect = response.response.rect;
-                                    
-                                    // Centraliza verticalmente
+
                                     pill_rect.min.y += (item_height - pill_height) / 2.0;
                                     pill_rect.max.y = pill_rect.min.y + pill_height;
                                     
-                                    // Afasta um pouquinho da borda e define a largura
                                     pill_rect.max.x = pill_rect.min.x + 4.0;
                                     
                                     ui.painter().rect_filled(
                                         pill_rect,
-                                        egui::Rounding::same(2.0), // totalmente arredondada
+                                        egui::Rounding::same(2.0),
                                         accent_color,
                                     );
                                     response.response.scroll_to_me(None);

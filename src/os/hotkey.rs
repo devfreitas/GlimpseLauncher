@@ -12,7 +12,11 @@ pub fn listen_for_hotkey(tx: Sender<crate::AppMsg>) {
 
         if result.is_ok() {
             let mut msg = MSG::default();
-            while GetMessageW(&mut msg, None, 0, 0).into() {
+            loop {
+                let ret = GetMessageW(&mut msg, None, 0, 0);
+                if ret.0 == 0 || ret.0 == -1 {
+                    break;
+                }
                 if msg.message == WM_HOTKEY {
                     let _ = tx.send(crate::AppMsg::ShowLauncher);
                 }

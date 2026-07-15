@@ -17,7 +17,7 @@ use std::sync::{
 };
 use std::thread;
 use tray_icon::{
-    menu::{CheckMenuItem, Menu, MenuEvent, MenuItem, PredefinedMenuItem},
+    menu::{Menu, MenuEvent, MenuItem, PredefinedMenuItem},
     Icon, TrayIconBuilder, TrayIconEvent,
 };
 use ui::LauncherApp;
@@ -27,9 +27,7 @@ pub enum AppMsg {
     ShowSettings,
 }
 
-fn create_tray_icon(
-    tx_focus: crossbeam_channel::Sender<AppMsg>,
-) -> Option<(tray_icon::TrayIcon, CheckMenuItem)> {
+fn setup_tray(tx_focus: crossbeam_channel::Sender<AppMsg>) -> Option<tray_icon::TrayIcon> {
     let icon_data = include_bytes!("../public/icone.ico");
     let icon_result = image::load_from_memory(icon_data)
         .map(|img| img.into_rgba8())
@@ -47,19 +45,9 @@ fn create_tray_icon(
     let tray_menu = Menu::new();
 
     let settings_i = MenuItem::with_id("settings_menu", "Configurações", true, None);
-    let theme_i = MenuItem::with_id("theme_toggle", "Alternar Modo Claro/Escuro", true, None);
-    let autostart_i = CheckMenuItem::with_id(
-        "autostart_toggle",
-        "Iniciar junto ao Windows",
-        true,
-        crate::core::config::is_autostart_enabled(),
-        None,
-    );
     let quit_i = MenuItem::with_id("quit_app", "Sair", true, None);
 
     let _ = tray_menu.append(&settings_i);
-    let _ = tray_menu.append(&theme_i);
-    let _ = tray_menu.append(&autostart_i);
     let _ = tray_menu.append(&PredefinedMenuItem::separator());
     let _ = tray_menu.append(&quit_i);
 
@@ -81,19 +69,6 @@ fn create_tray_icon(
                             std::process::exit(0);
                         } else if event.id == "settings_menu" {
                             let _ = tx_focus.send(AppMsg::ShowSettings);
-                        } else if event.id == "autostart_toggle" {
-                            let is_checked = crate::core::config::is_autostart_enabled();
-                            crate::core::config::toggle_autostart(!is_checked);
-
-                            let mut config = crate::core::config::load();
-                            config.start_with_windows = Some(!is_checked);
-                            let _ = crate::core::config::save(&config);
-                        } else if event.id == "theme_toggle" {
-                            let mut config = crate::core::config::load();
-                            let current = config.theme.clone().unwrap_or_default();
-                            config.theme = Some(current.toggle());
-                            let _ = crate::core::config::save(&config);
-                            let _ = tx_focus.send(AppMsg::ShowLauncher); // Focus to show the updated theme
                         }
                     }
                 }
@@ -109,8 +84,7 @@ fn create_tray_icon(
             }
         }
     });
-
-    Some((tray_icon, autostart_i))
+    Some(tray_icon)
 }
 
 fn main() -> Result<(), eframe::Error> {
@@ -135,6 +109,8 @@ fn main() -> Result<(), eframe::Error> {
     };
 
     let (tx, rx) = unbounded::<AppMsg>();
+
+    let _config = crate::core::config::load();
 
     let tx_hotkey = tx.clone();
     thread::spawn(move || {
@@ -178,10 +154,8 @@ fn main() -> Result<(), eframe::Error> {
             egui_phosphor::add_to_fonts(&mut fonts, egui_phosphor::Variant::Regular);
             cc.egui_ctx.set_fonts(fonts);
 
-            let mut tray_autostart_item = None;
-            if let Some((tray, autostart_i)) = create_tray_icon(tx_tray.clone()) {
+            if let Some(tray) = setup_tray(tx_tray) {
                 Box::leak(Box::new(tray));
-                tray_autostart_item = Some(autostart_i);
             }
 
             let ctx = cc.egui_ctx.clone();
@@ -205,7 +179,6 @@ fn main() -> Result<(), eframe::Error> {
             Box::new(LauncherApp::new(
                 app_visibility,
                 app_settings,
-                tray_autostart_item,
             ))
         }),
     )

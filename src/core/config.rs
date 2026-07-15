@@ -9,7 +9,6 @@ const APP_REGISTRY_NAME: &str = "GlimpseLauncher";
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
 pub struct Config {
-    pub hotkey: Option<String>,
     pub start_with_windows: Option<bool>,
     pub icon_path: Option<String>,
     pub theme: Option<ThemeConfig>,
@@ -70,7 +69,6 @@ impl ThemeConfig {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            hotkey: Some("Alt+S".to_string()),
             icon_path: None,
             theme: Some(ThemeConfig {
                 background_rgba: Some([20, 20, 22, 200]),
