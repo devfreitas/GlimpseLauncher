@@ -48,10 +48,7 @@ pub struct LauncherApp {
 }
 
 impl LauncherApp {
-    pub fn new(
-        is_visible: Arc<AtomicBool>,
-        show_settings: Arc<AtomicBool>,
-    ) -> Self {
+    pub fn new(is_visible: Arc<AtomicBool>, show_settings: Arc<AtomicBool>) -> Self {
         let (tx, rx) = crossbeam_channel::unbounded();
 
         let tx_clone = tx.clone();
@@ -357,17 +354,17 @@ impl eframe::App for LauncherApp {
                             ];
                             for (i, (tab_name, icon)) in tabs.iter().enumerate() {
                                 let is_selected = self.settings_tab == i;
-                                
+
                                 ui.horizontal(|ui| {
                                     ui.add_space(12.0);
                                     let (rect, response) = ui.allocate_exact_size(egui::vec2(176.0, 40.0), egui::Sense::click());
-                                    
+
                                     let hover_anim = ctx.animate_bool_with_time(ui.id().with(format!("tab_hover_{}", i)), response.hovered(), 0.15);
-                                    
+
                                     if is_selected {
                                         ui.painter().rect_filled(rect, 8.0, accent_color.linear_multiply(0.15));
                                         ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, accent_color.linear_multiply(0.3)));
-                                        
+
                                         ui.painter().rect_filled(
                                             egui::Rect::from_min_size(rect.min + egui::vec2(0.0, 10.0), egui::vec2(3.0, 20.0)),
                                             1.5,
@@ -377,11 +374,11 @@ impl eframe::App for LauncherApp {
                                         let fill = if is_dark { egui::Color32::from_white_alpha((10.0 * hover_anim) as u8) } else { egui::Color32::from_black_alpha((10.0 * hover_anim) as u8) };
                                         ui.painter().rect_filled(rect, 8.0, fill);
                                     }
-                                    
+
                                     if response.clicked() {
                                         self.settings_tab = i;
                                     }
-                                    
+
                                     let text_color = if is_selected { accent_color } else { desc_color };
                                     let text_pos = rect.min + egui::vec2(16.0, 12.0);
                                     ui.painter().text(
@@ -506,13 +503,13 @@ impl eframe::App for LauncherApp {
                                                                 ui.add_space(12.0);
                                                                 ui.label(egui::RichText::new("Personalize o Glimpse de acordo com o seu fluxo de\ntrabalho. Menos cliques, mais produtividade.").size(14.0).color(desc_color));
                                                                 ui.add_space(24.0);
-                                                                
+
                                                                 // Mini Preview
                                                                 let preview_bg = if is_dark { egui::Color32::from_rgb(15, 15, 18) } else { egui::Color32::from_rgb(255, 255, 255) };
                                                                 let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 48.0), egui::Sense::hover());
                                                                 ui.painter().rect_filled(rect, 8.0, preview_bg);
                                                                 ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, context_stroke));
-                                                                
+
                                                                 let icon_rect = egui::Rect::from_center_size(rect.left_center() + egui::vec2(24.0, 0.0), egui::vec2(24.0, 24.0));
                                                                 ui.painter().rect_filled(icon_rect, 4.0, accent_color.linear_multiply(0.2));
                                                                 ui.painter().text(
@@ -586,18 +583,18 @@ impl eframe::App for LauncherApp {
                                                                 let c = if is_dark { colors.0 } else { colors.1 };
                                                                 let color = egui::Color32::from_rgb(c[0], c[1], c[2]);
                                                                 let is_selected = accent_color_index == idx;
-                                                                
+
                                                                 let (rect, response) = ui.allocate_exact_size(egui::vec2(32.0, 32.0), egui::Sense::click());
-                                                                
+
                                                                 let hover_anim = ctx.animate_bool_with_time(ui.id().with(format!("color_hover_{}", idx)), response.hovered(), 0.15);
-                                                                
+
                                                                 if response.clicked() {
                                                                     let mut new_theme = self.config.theme.clone().unwrap_or_default();
                                                                     new_theme.accent_color_index = Some(idx);
                                                                     self.config.theme = Some(new_theme);
                                                                     config_changed = true;
                                                                 }
-                                                                
+
                                                                 if ui.is_rect_visible(rect) {
                                                                     let radius = 12.0 + (1.5 * hover_anim);
                                                                     ui.painter().circle_filled(rect.center(), radius, color);
@@ -608,24 +605,24 @@ impl eframe::App for LauncherApp {
                                                                 ui.add_space(16.0);
                                                             }
                                                         });
-                                                        
+
                                                         ui.add_space(24.0);
                                                         ui.label(egui::RichText::new("Preview").size(14.0).strong().color(title_color));
                                                         ui.add_space(4.0);
                                                         ui.label(egui::RichText::new("Veja como o Glimpse ficará com sua configuração.").size(13.0).color(desc_color));
                                                         ui.add_space(12.0);
-                                                        
+
                                                         // Fake launcher inside card
                                                         let preview_bg = if is_dark { egui::Color32::from_rgb(15, 15, 18) } else { egui::Color32::from_rgb(255, 255, 255) };
                                                         let context_stroke = if is_dark { egui::Color32::from_rgb(34, 34, 40) } else { egui::Color32::from_rgb(220, 220, 225) };
-                                                        
+
                                                         let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 64.0), egui::Sense::hover());
                                                         ui.painter().rect_filled(rect, 8.0, preview_bg);
                                                         ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, context_stroke));
-                                                        
+
                                                         // Glowing outline around the launcher as "accent color"
                                                         ui.painter().rect_stroke(rect.shrink(1.0), 7.0, egui::Stroke::new(2.0_f32, accent_color.linear_multiply(0.4)));
-                                                        
+
                                                         let icon_rect = egui::Rect::from_center_size(rect.left_center() + egui::vec2(24.0, 0.0), egui::vec2(28.0, 28.0));
                                                         ui.painter().rect_filled(icon_rect, 6.0, accent_color.linear_multiply(0.2));
                                                         ui.painter().text(
@@ -656,7 +653,7 @@ impl eframe::App for LauncherApp {
                                                             egui::FontId::proportional(13.0),
                                                             desc_color,
                                                         );
-                                                        
+
                                                         ui.add_space(16.0);
                                                         ui.horizontal(|ui| {
                                                             let success_color = egui::Color32::from_rgb(46, 204, 113);
@@ -680,20 +677,20 @@ impl eframe::App for LauncherApp {
                                                         ui.horizontal(|ui| {
                                                             ui.add_space(ui.available_width() / 2.0 - monitor_width / 2.0); // Center the monitor
                                                             let (rect, response) = ui.allocate_exact_size(egui::vec2(monitor_width, monitor_height), egui::Sense::click());
-                                                            
+
                                                             if ui.is_rect_visible(rect) {
                                                                 let monitor_bg = if is_dark { egui::Color32::from_rgba_unmultiplied(20, 20, 25, 255) } else { egui::Color32::from_gray(215) };
                                                                 let monitor_stroke = if is_dark { egui::Color32::from_rgba_unmultiplied(40, 40, 48, 255) } else { egui::Color32::from_gray(180) };
-                                                                
+
                                                                 ui.painter().rect_filled(rect, 8.0, monitor_bg);
                                                                 ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(2.0_f32, monitor_stroke));
-                                                                
+
                                                                 let stand_rect = egui::Rect::from_min_size(rect.center_bottom() - egui::vec2(25.0, 0.0), egui::vec2(50.0, 25.0));
                                                                 ui.painter().rect_filled(stand_rect, 0.0, monitor_stroke);
                                                                 ui.painter().rect_filled(egui::Rect::from_min_size(stand_rect.center_bottom() - egui::vec2(40.0, 0.0), egui::vec2(80.0, 6.0)), 3.0, monitor_stroke);
-                                                                
+
                                                                 let inner_rect = rect.shrink(6.0);
-                                                                
+
                                                                 for row in 0..3 {
                                                                     for col in 0..3 {
                                                                         let cell_w = inner_rect.width() / 3.0;
@@ -702,44 +699,44 @@ impl eframe::App for LauncherApp {
                                                                             inner_rect.min + egui::vec2(col as f32 * cell_w, row as f32 * cell_h),
                                                                             egui::vec2(cell_w, cell_h),
                                                                         ).shrink(6.0);
-                                                                        
+
                                                                         let (target_px, target_py) = match (row, col) {
                                                                             (0, 0) => (0.1, 0.1), (0, 1) => (0.5, 0.1), (0, 2) => (0.9, 0.1),
                                                                             (1, 0) => (0.02, 0.25), (1, 1) => (0.5, 0.25), (1, 2) => (0.98, 0.25),
                                                                             (2, 0) => (0.02, 0.65), (2, 1) => (0.5, 0.65), (2, 2) => (0.98, 0.65),
                                                                             _ => (0.5, 0.25),
                                                                         };
-                                                                        
+
                                                                         if response.clicked() && cell_rect.contains(response.interact_pointer_pos().unwrap_or(egui::Pos2::ZERO)) {
                                                                             self.config.position_x = Some(target_px);
                                                                             self.config.position_y = Some(target_py);
                                                                             config_changed = true;
                                                                         }
-                                                                        
+
                                                                         let current_px = self.config.position_x.unwrap_or(0.5);
                                                                         let current_py = self.config.position_y.unwrap_or(0.25);
                                                                         let is_active = (current_px - target_px).abs() < 0.001 && (current_py - target_py).abs() < 0.001;
-                                                                        
+
                                                                         let mut cell_hovered = false;
                                                                         if let Some(pos) = ctx.pointer_hover_pos() {
                                                                             if cell_rect.contains(pos) { cell_hovered = true; }
                                                                         }
-                                                                        
+
                                                                         let anim = ctx.animate_bool_with_time(ui.id().with(format!("cell_anim_{}_{}", row, col)), cell_hovered || is_active, 0.15);
-                                                                        
+
                                                                         let cell_bg = if is_active {
                                                                             accent_color
                                                                         } else {
                                                                             let base = if is_dark { egui::Color32::from_rgba_unmultiplied(35, 35, 42, 255) } else { egui::Color32::from_gray(225) };
                                                                             let hover = if is_dark { egui::Color32::from_rgba_unmultiplied(50, 50, 60, 255) } else { egui::Color32::from_gray(200) };
-                                                                            
+
                                                                             egui::Color32::from_rgb(
                                                                                 (base.r() as f32 * (1.0 - anim) + hover.r() as f32 * anim) as u8,
                                                                                 (base.g() as f32 * (1.0 - anim) + hover.g() as f32 * anim) as u8,
                                                                                 (base.b() as f32 * (1.0 - anim) + hover.b() as f32 * anim) as u8,
                                                                             )
                                                                         };
-                                                                        
+
                                                                         ui.painter().rect_filled(cell_rect, 4.0, cell_bg);
                                                                         if is_active {
                                                                             ui.painter().rect_stroke(cell_rect, 4.0, egui::Stroke::new(2.0_f32, accent_color.linear_multiply(0.5))); // Glow
@@ -748,25 +745,25 @@ impl eframe::App for LauncherApp {
                                                                 }
                                                             }
                                                         });
-                                                        
+
                                                         ui.add_space(48.0);
                                                         ui.horizontal(|ui| {
                                                             ui.add_space(ui.available_width() / 2.0 - 100.0);
                                                             let (rect, resp) = ui.allocate_exact_size(egui::vec2(200.0, 36.0), egui::Sense::click());
                                                             let btn_anim = ctx.animate_bool_with_time(ui.id().with("btn_anim"), resp.hovered(), 0.15);
-                                                            
+
                                                             let btn_bg = if is_dark { egui::Color32::from_rgba_unmultiplied(40, 40, 48, 255) } else { egui::Color32::from_gray(225) };
                                                             let hover_bg = if is_dark { egui::Color32::from_rgba_unmultiplied(60, 60, 70, 255) } else { egui::Color32::from_gray(200) };
-                                                            
+
                                                             let bg = egui::Color32::from_rgb(
                                                                 (btn_bg.r() as f32 * (1.0 - btn_anim) + hover_bg.r() as f32 * btn_anim) as u8,
                                                                 (btn_bg.g() as f32 * (1.0 - btn_anim) + hover_bg.g() as f32 * btn_anim) as u8,
                                                                 (btn_bg.b() as f32 * (1.0 - btn_anim) + hover_bg.b() as f32 * btn_anim) as u8,
                                                             );
-                                                            
+
                                                             ui.painter().rect_filled(rect, 8.0, bg);
                                                             ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, if is_dark { egui::Color32::from_rgba_unmultiplied(60, 60, 70, 255) } else { egui::Color32::from_gray(180) }));
-                                                            
+
                                                             ui.painter().text(
                                                                 rect.center() - egui::vec2(60.0, 0.0),
                                                                 egui::Align2::CENTER_CENTER,
@@ -781,7 +778,7 @@ impl eframe::App for LauncherApp {
                                                                 egui::FontId::proportional(14.0).clone(),
                                                                 title_color,
                                                             );
-                                                            
+
                                                             if resp.clicked() {
                                                                 self.is_dragging_mode = true;
                                                                 self.show_settings.store(false, std::sync::atomic::Ordering::SeqCst);
@@ -789,7 +786,7 @@ impl eframe::App for LauncherApp {
                                                             }
                                                         });
                                                         ui.add_space(16.0);
-                                                        
+
                                                         let info_bg = if is_dark { egui::Color32::from_rgba_unmultiplied(20, 20, 25, 255) } else { egui::Color32::from_gray(240) };
                                                         let (info_rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 40.0), egui::Sense::hover());
                                                         ui.painter().rect_filled(info_rect, 6.0, info_bg);
@@ -815,7 +812,7 @@ impl eframe::App for LauncherApp {
                                                 ui.add_space(4.0);
                                                 ui.label(egui::RichText::new("Configure atalhos e comportamento do sistema.").size(14.0).color(desc_color));
                                                 ui.add_space(24.0);
-                                                
+
 
                                                 ui.add_space(12.0);
 
@@ -849,12 +846,12 @@ impl eframe::App for LauncherApp {
                                                 ui.add_space(4.0);
                                                 ui.label(egui::RichText::new("Informações do Glimpse.").size(14.0).color(desc_color));
                                                 ui.add_space(24.0);
-                                                
+
                                                 card!(ui, |ui| {
                                                     ui.vertical(|ui| {
                                                         ui.label(egui::RichText::new("Informações do Sistema").size(15.0).strong().color(title_color));
                                                         ui.add_space(16.0);
-                                                        
+
                                                         let mut info_row = |label: &str, value: &str| {
                                                             ui.horizontal(|ui| {
                                                                 ui.label(egui::RichText::new(label).size(13.0).color(desc_color));
@@ -864,7 +861,7 @@ impl eframe::App for LauncherApp {
                                                             });
                                                             ui.add_space(12.0);
                                                         };
-                                                        
+
                                                         info_row("Versão do Glimpse", "0.8.0");
                                                         info_row("Tema do Sistema", if is_dark { "Escuro" } else { "Claro" });
                                                         info_row("Idioma", "Português (Brasil)");
@@ -887,7 +884,7 @@ impl eframe::App for LauncherApp {
                         self.show_settings.store(false, Ordering::SeqCst);
                     }
                 }
-            ); 
+            );
         }
 
         if !current_visibility {
@@ -915,7 +912,7 @@ impl eframe::App for LauncherApp {
         let theme = self.config.theme.as_ref().unwrap_or(&DEFAULT_THEME);
         let is_dark = theme.is_dark();
         let bg = if is_dark {
-            [15, 15, 15, 242] 
+            [15, 15, 15, 242]
         } else {
             let mut l_bg = theme.background_rgba.unwrap_or([245, 245, 250, 255]);
             l_bg[3] = 242;
@@ -1326,14 +1323,14 @@ impl eframe::App for LauncherApp {
 
                                 if is_selected {
                                     let item_height = response.response.rect.height();
-                                    let pill_height = 24.0; 
+                                    let pill_height = 24.0;
                                     let mut pill_rect = response.response.rect;
 
                                     pill_rect.min.y += (item_height - pill_height) / 2.0;
                                     pill_rect.max.y = pill_rect.min.y + pill_height;
-                                    
+
                                     pill_rect.max.x = pill_rect.min.x + 4.0;
-                                    
+
                                     ui.painter().rect_filled(
                                         pill_rect,
                                         egui::Rounding::same(2.0),

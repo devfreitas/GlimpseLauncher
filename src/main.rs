@@ -176,10 +176,7 @@ fn main() -> Result<(), eframe::Error> {
                 }
             });
 
-            Box::new(LauncherApp::new(
-                app_visibility,
-                app_settings,
-            ))
+            Box::new(LauncherApp::new(app_visibility, app_settings))
         }),
     )
 }

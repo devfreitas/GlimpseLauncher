@@ -316,10 +316,7 @@ fn scan_directory(
 
     for entry in walker.filter_map(|e| e.ok()) {
         let path = entry.path();
-        let name_cow = path
-            .file_stem()
-            .unwrap_or_default()
-            .to_string_lossy();
+        let name_cow = path.file_stem().unwrap_or_default().to_string_lossy();
 
         if is_blacklisted(&name_cow) {
             continue;
