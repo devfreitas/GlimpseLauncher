@@ -18,7 +18,7 @@ pub fn search_apps(query: &str, index: &[AppEntry]) -> Vec<AppEntry> {
 
     let matches = MATCHER.with(|m| {
         let mut matcher = m.borrow_mut();
-        pattern.match_list(index, &mut *matcher)
+        pattern.match_list(index, &mut matcher)
     });
 
     let mut results: Vec<(i64, &AppEntry)> = matches
