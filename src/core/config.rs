@@ -57,6 +57,7 @@ impl ThemeConfig {
         self.background_rgba.map_or(true, |rgba| rgba[0] < 100)
     }
 
+    #[allow(dead_code)]
     pub fn toggle(&self) -> Self {
         if self.is_dark() {
             Self::light()
@@ -142,6 +143,7 @@ pub fn save(config: &Config) -> std::io::Result<()> {
     fs::write(&path, toml_str)
 }
 
+#[allow(dead_code)]
 pub fn is_autostart_enabled() -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     if let Ok(run) = hkcu.open_subkey(REGISTRY_RUN_KEY) {

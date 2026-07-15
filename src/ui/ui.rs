@@ -299,7 +299,7 @@ impl eframe::App for LauncherApp {
                                 egui::Frame::none()
                                     .fill(bg_color)
                                     .rounding(10.0)
-                                    .stroke(egui::Stroke::new(1.0, stroke_color))
+                                    .stroke(egui::Stroke::new(1.0_f32, stroke_color))
                                     .inner_margin(egui::Margin::symmetric(16.0, 14.0))
                                     .show($ui, |$inner_ui| { $body })
                             }
@@ -329,7 +329,7 @@ impl eframe::App for LauncherApp {
                         .show(ctx, |ui| {
                             let rect = ui.max_rect();
                             let sep_color = if is_dark { egui::Color32::from_rgba_unmultiplied(255, 255, 255, 10) } else { egui::Color32::from_rgba_unmultiplied(0, 0, 0, 10) };
-                            ui.painter().vline(rect.right(), rect.y_range(), egui::Stroke::new(1.0, sep_color));
+                            ui.painter().vline(rect.right(), rect.y_range(), egui::Stroke::new(1.0_f32, sep_color));
 
                             ui.add_space(32.0);
                             ui.horizontal(|ui| {
@@ -366,7 +366,7 @@ impl eframe::App for LauncherApp {
                                     
                                     if is_selected {
                                         ui.painter().rect_filled(rect, 8.0, accent_color.linear_multiply(0.15));
-                                        ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0, accent_color.linear_multiply(0.3)));
+                                        ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, accent_color.linear_multiply(0.3)));
                                         
                                         ui.painter().rect_filled(
                                             egui::Rect::from_min_size(rect.min + egui::vec2(0.0, 10.0), egui::vec2(3.0, 20.0)),
@@ -497,7 +497,7 @@ impl eframe::App for LauncherApp {
                                                         egui::Frame::none()
                                                             .fill(context_bg)
                                                             .rounding(12.0)
-                                                            .stroke(egui::Stroke::new(1.0, context_stroke))
+                                                            .stroke(egui::Stroke::new(1.0_f32, context_stroke))
                                                             .inner_margin(egui::Margin::symmetric(24.0, 24.0))
                                                             .show(ui, |ui| {
                                                                 ui.label(egui::RichText::new(egui_phosphor::regular::SPARKLE).size(24.0).color(desc_color));
@@ -511,7 +511,7 @@ impl eframe::App for LauncherApp {
                                                                 let preview_bg = if is_dark { egui::Color32::from_rgb(15, 15, 18) } else { egui::Color32::from_rgb(255, 255, 255) };
                                                                 let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 48.0), egui::Sense::hover());
                                                                 ui.painter().rect_filled(rect, 8.0, preview_bg);
-                                                                ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0, context_stroke));
+                                                                ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, context_stroke));
                                                                 
                                                                 let icon_rect = egui::Rect::from_center_size(rect.left_center() + egui::vec2(24.0, 0.0), egui::vec2(24.0, 24.0));
                                                                 ui.painter().rect_filled(icon_rect, 4.0, accent_color.linear_multiply(0.2));
@@ -602,7 +602,7 @@ impl eframe::App for LauncherApp {
                                                                     let radius = 12.0 + (1.5 * hover_anim);
                                                                     ui.painter().circle_filled(rect.center(), radius, color);
                                                                     if is_selected {
-                                                                        ui.painter().circle_stroke(rect.center(), 15.0, egui::Stroke::new(2.0, color));
+                                                                        ui.painter().circle_stroke(rect.center(), 15.0, egui::Stroke::new(2.0_f32, color));
                                                                     }
                                                                 }
                                                                 ui.add_space(16.0);
@@ -621,10 +621,10 @@ impl eframe::App for LauncherApp {
                                                         
                                                         let (rect, _) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 64.0), egui::Sense::hover());
                                                         ui.painter().rect_filled(rect, 8.0, preview_bg);
-                                                        ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0, context_stroke));
+                                                        ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, context_stroke));
                                                         
                                                         // Glowing outline around the launcher as "accent color"
-                                                        ui.painter().rect_stroke(rect.shrink(1.0), 7.0, egui::Stroke::new(2.0, accent_color.linear_multiply(0.4)));
+                                                        ui.painter().rect_stroke(rect.shrink(1.0), 7.0, egui::Stroke::new(2.0_f32, accent_color.linear_multiply(0.4)));
                                                         
                                                         let icon_rect = egui::Rect::from_center_size(rect.left_center() + egui::vec2(24.0, 0.0), egui::vec2(28.0, 28.0));
                                                         ui.painter().rect_filled(icon_rect, 6.0, accent_color.linear_multiply(0.2));
@@ -686,7 +686,7 @@ impl eframe::App for LauncherApp {
                                                                 let monitor_stroke = if is_dark { egui::Color32::from_rgba_unmultiplied(40, 40, 48, 255) } else { egui::Color32::from_gray(180) };
                                                                 
                                                                 ui.painter().rect_filled(rect, 8.0, monitor_bg);
-                                                                ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(2.0, monitor_stroke));
+                                                                ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(2.0_f32, monitor_stroke));
                                                                 
                                                                 let stand_rect = egui::Rect::from_min_size(rect.center_bottom() - egui::vec2(25.0, 0.0), egui::vec2(50.0, 25.0));
                                                                 ui.painter().rect_filled(stand_rect, 0.0, monitor_stroke);
@@ -742,7 +742,7 @@ impl eframe::App for LauncherApp {
                                                                         
                                                                         ui.painter().rect_filled(cell_rect, 4.0, cell_bg);
                                                                         if is_active {
-                                                                            ui.painter().rect_stroke(cell_rect, 4.0, egui::Stroke::new(2.0, accent_color.linear_multiply(0.5))); // Glow
+                                                                            ui.painter().rect_stroke(cell_rect, 4.0, egui::Stroke::new(2.0_f32, accent_color.linear_multiply(0.5))); // Glow
                                                                         }
                                                                     }
                                                                 }
@@ -765,7 +765,7 @@ impl eframe::App for LauncherApp {
                                                             );
                                                             
                                                             ui.painter().rect_filled(rect, 8.0, bg);
-                                                            ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0, if is_dark { egui::Color32::from_rgba_unmultiplied(60, 60, 70, 255) } else { egui::Color32::from_gray(180) }));
+                                                            ui.painter().rect_stroke(rect, 8.0, egui::Stroke::new(1.0_f32, if is_dark { egui::Color32::from_rgba_unmultiplied(60, 60, 70, 255) } else { egui::Color32::from_gray(180) }));
                                                             
                                                             ui.painter().text(
                                                                 rect.center() - egui::vec2(60.0, 0.0),
@@ -956,7 +956,7 @@ impl eframe::App for LauncherApp {
             visuals.override_text_color = Some(egui::Color32::BLACK);
         }
         visuals.widgets.inactive.bg_stroke =
-            egui::Stroke::new(2.0, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
+            egui::Stroke::new(2.0_f32, egui::Color32::from_rgba_unmultiplied(0, 0, 0, 80));
         visuals.window_rounding = egui::Rounding::same(12.0);
         ctx.set_visuals(visuals);
 
@@ -969,7 +969,7 @@ impl eframe::App for LauncherApp {
         let frame_style = egui::Frame {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
             rounding: egui::Rounding::same(16.0),
-            stroke: egui::Stroke::new(1.0, frame_stroke),
+            stroke: egui::Stroke::new(1.0_f32, frame_stroke),
             inner_margin: egui::Margin {
                 left: 3.0,
                 right: 3.0,
@@ -1071,7 +1071,7 @@ impl eframe::App for LauncherApp {
 
                 egui::Frame::none()
                     .fill(input_fill)
-                    .stroke(egui::Stroke::new(1.0, input_stroke))
+                    .stroke(egui::Stroke::new(1.0_f32, input_stroke))
                     .rounding(10.0) // rounded search bar
                     .inner_margin(egui::Margin::symmetric(14.0, 10.0))
                     .show(ui, |ui| {
