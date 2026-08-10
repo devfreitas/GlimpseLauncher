@@ -2,12 +2,6 @@
 
 # Glimpse Launcher
 
-[![Rust](https://img.shields.io/badge/Rust-CE412B?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Performance](https://img.shields.io/badge/Performance-Ultraleve-FF4500?style=for-the-badge&logo=rocket&logoColor=white)]()
-[![Windows 11](https://img.shields.io/badge/Windows_11-E3371E?style=for-the-badge&logo=windows11&logoColor=white)](https://www.microsoft.com/windows)
-[![Version](https://img.shields.io/badge/Versão-0.8.1-B7410E?style=for-the-badge)](https://github.com/devfreitas/GlimpseLauncher/releases)
-
-
 **Um lançador de buscas para desktop ultraleve e minimalista, focado em performance absoluta, design moderno e baixo consumo de recursos para Windows 11.**
 
 
