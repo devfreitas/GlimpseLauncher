@@ -957,21 +957,16 @@ impl eframe::App for LauncherApp {
         visuals.window_rounding = egui::Rounding::same(12.0);
         ctx.set_visuals(visuals);
 
-        let frame_stroke = if is_dark {
-            egui::Color32::from_rgba_premultiplied(60, 60, 70, 255)
-        } else {
-            egui::Color32::from_rgba_premultiplied(200, 200, 215, 255)
-        };
-
+        // The outer frame now uses the accent color to wrap the entire launcher
         let frame_style = egui::Frame {
             fill: egui::Color32::from_rgba_unmultiplied(bg[0], bg[1], bg[2], bg[3]),
             rounding: egui::Rounding::same(16.0),
-            stroke: egui::Stroke::new(1.0_f32, frame_stroke),
+            stroke: egui::Stroke::new(2.0_f32, accent_color),
             inner_margin: egui::Margin {
                 left: 3.0,
                 right: 3.0,
                 top: 3.0,
-                bottom: 1.0,
+                bottom: 3.0,
             },
             shadow: egui::epaint::Shadow::NONE,
             ..Default::default()
@@ -981,6 +976,7 @@ impl eframe::App for LauncherApp {
             .frame(frame_style)
             .show(ctx, |ui| {
                 ui.style_mut().visuals.extreme_bg_color = egui::Color32::TRANSPARENT;
+                ui.spacing_mut().item_spacing.y = 0.0;
 
                 if self.is_dragging_mode {
                     ui.add_space(4.0);
@@ -1063,12 +1059,10 @@ impl eframe::App for LauncherApp {
                 } else {
                     egui::Color32::from_rgba_premultiplied(245, 245, 250, 255)
                 };
-                // Borda do campo de busca colorida para indicar foco
-                let input_stroke = accent_color;
-
+                // O campo de busca agora não tem borda, já que a borda do launcher inteiro indica o foco
                 egui::Frame::none()
                     .fill(input_fill)
-                    .stroke(egui::Stroke::new(1.0_f32, input_stroke))
+                    .stroke(egui::Stroke::NONE)
                     .rounding(10.0) // rounded search bar
                     .inner_margin(egui::Margin::symmetric(14.0, 10.0))
                     .show(ui, |ui| {
@@ -1164,6 +1158,7 @@ impl eframe::App for LauncherApp {
                 }
 
                 if !self.filtered.is_empty() && !self.search_query.trim().starts_with("g ") {
+                    ui.add_space(6.0); // Espaçamento entre o campo de busca e a lista de resultados
                     egui::ScrollArea::vertical()
                         .max_height(f32::INFINITY)
                         .show(ui, |ui| {
