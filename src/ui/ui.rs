@@ -408,7 +408,7 @@ impl eframe::App for LauncherApp {
                                     ui.add_space(8.0);
                                     ui.vertical(|ui| {
                                         ui.label(egui::RichText::new("Sobre o Glimpse").size(13.0).color(desc_color));
-                                        ui.label(egui::RichText::new("v0.8.0").size(12.0).color(desc_color.linear_multiply(0.7)));
+                                        ui.label(egui::RichText::new("v1.0.0").size(12.0).color(desc_color.linear_multiply(0.7)));
                                     });
                                 });
                             });
