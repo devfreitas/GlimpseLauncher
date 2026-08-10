@@ -862,7 +862,7 @@ impl eframe::App for LauncherApp {
                                                             ui.add_space(12.0);
                                                         };
 
-                                                        info_row("Versão do Glimpse", "0.8.0");
+                                                        info_row("Versão do Glimpse", "1.0.0");
                                                         info_row("Tema do Sistema", if is_dark { "Escuro" } else { "Claro" });
                                                         info_row("Idioma", "Português (Brasil)");
                                                         info_row("Plataforma", "Windows 11 Pro");
